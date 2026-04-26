@@ -31,12 +31,25 @@
 
         * {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
         }
 
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             background-attachment: fixed;
+        }
+
+        #app {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
         }
 
         .hero-bg {
@@ -273,6 +286,18 @@
         .scrollbar-hide::-webkit-scrollbar {
             display: none;
         }
+
+        #loading-screen {
+            animation: loadingScreenFade 0.4s ease 2s forwards;
+        }
+
+        @keyframes loadingScreenFade {
+            to {
+                opacity: 0;
+                visibility: hidden;
+                pointer-events: none;
+            }
+        }
     </style>
 </head>
 <body class="antialiased text-gray-800">
@@ -286,7 +311,7 @@
     </div>
 </div>
 
-<div id="app" class="min-h-screen opacity-0 transition-opacity duration-500">
+<div id="app" class="min-h-screen opacity-100 transition-opacity duration-500">
 
     <!-- Hero Section -->
     <header class="relative overflow-hidden">
@@ -614,7 +639,6 @@
                 <button onclick="showAdminTab('inventory')" id="tab-inventory" class="admin-tab px-4 py-2 text-sm font-medium">Inventory</button>
                 <button onclick="showAdminTab('analytics')" id="tab-analytics" class="admin-tab px-4 py-2 text-sm font-medium">Analytics</button>
                 <button onclick="showAdminTab('feedback')" id="tab-feedback" class="admin-tab px-4 py-2 text-sm font-medium">Feedback</button>
-                <button onclick="showAdminTab('profile')" id="tab-profile" class="admin-tab px-4 py-2 text-sm font-medium">Profile</button>
             </div>
 
             <!-- Overview Tab -->
@@ -812,43 +836,6 @@
                 <div id="feedback-list" class="space-y-6"></div>
             </div>
 
-            <!-- Profile Tab -->
-            <div id="admin-profile" class="admin-tab-content hidden">
-                <div class="mb-6">
-                    <h2 class="text-2xl font-bold">Profile Settings</h2>
-                    <p class="text-gray-600">Update your account information</p>
-                </div>
-
-                <div class="glass-card p-8 max-w-md">
-                    <div id="profile-loading" class="text-center py-8">
-                        <div class="loading-spinner mx-auto mb-4"></div>
-                        <p class="text-gray-600">Loading profile...</p>
-                    </div>
-
-                    <div id="profile-content" class="hidden">
-                        <form onsubmit="handleUpdateProfile(event)" class="space-y-6">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-                                <input type="text" id="profile-name" class="input-field w-full" required>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                                <input type="email" id="profile-email" class="input-field w-full" readonly>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                                <input type="tel" id="profile-phone" class="input-field w-full" placeholder="Enter your phone number">
-                            </div>
-
-                            <button type="submit" id="profile-btn" class="btn-primary w-full flex items-center justify-center space-x-2">
-                                <span id="profile-text">Update Profile</span>
-                                <div id="profile-spinner" class="hidden loading-spinner"></div>
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
         <!-- Profile View -->
         <div id="profile-view" class="view hidden animate-fade-in">
             <div class="max-w-2xl mx-auto">
@@ -917,7 +904,7 @@
                     </div>
                 </div>
             </div>
-        </divdiv>
+        </div>
     </main>
 </div>
 
@@ -925,17 +912,41 @@
     // Global state
     let token = localStorage.getItem('token');
     let isAdmin = localStorage.getItem('isAdmin') === 'true';
-    let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    let cart = [];
+    try {
+        const savedCart = localStorage.getItem('cart');
+        cart = savedCart ? JSON.parse(savedCart) : [];
+        if(!Array.isArray(cart)) cart = [];
+    } catch(error) {
+        cart = [];
+        localStorage.setItem('cart', '[]');
+    }
     let currentView = 'login';
     let currentFilter = 'all';
+
+    const API_BASE_URL = (
+        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
+        window.location.port !== '8000'
+    ) ? 'http://127.0.0.1:8000' : '';
+
+    function buildApiUrl(endpoint) {
+        if(/^https?:\/\//.test(endpoint)) return endpoint;
+        return `${API_BASE_URL}${endpoint}`;
+    }
+
+    function hideLoadingScreen() {
+        const loadingScreen = document.getElementById('loading-screen');
+        const app = document.getElementById('app');
+
+        if(loadingScreen) loadingScreen.style.display = 'none';
+        if(app) app.style.opacity = '1';
+    }
 
     // Initialize app
     document.addEventListener('DOMContentLoaded', function() {
         // Hide loading screen and show app
-        setTimeout(() => {
-            document.getElementById('loading-screen').style.display = 'none';
-            document.getElementById('app').style.opacity = '1';
-        }, 1500);
+        setTimeout(hideLoadingScreen, 1200);
+        window.addEventListener('load', hideLoadingScreen, {once: true});
 
         // Initialize Lucide icons
         lucide.createIcons();
@@ -980,8 +991,8 @@
             sendBtn.disabled = this.value.trim().length === 0;
         });
 
-        // Initialize view
-        if(view === 'admin' && isAdmin) {
+        // Initialize admin panel only when already on admin view
+        if(currentView === 'admin' && isAdmin) {
             loadAdminStats();
             showAdminTab('overview');
         }
@@ -1016,7 +1027,7 @@
         if(token) headers['Authorization'] = `Bearer ${token}`;
 
         try {
-            const res = await fetch(endpoint, {...options, headers});
+            const res = await fetch(buildApiUrl(endpoint), {...options, headers});
 
             if(res.status === 401) {
                 logout();
@@ -1417,21 +1428,21 @@
                     <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
-                </di    ${order.status === 'pending' ? `
-                            <div class="text-right">
-                                <button onclick="cancelOrder('${order.id}')" class="btn-secondary text-sm px-4 py-2 text-red-600 hover:text-red-700">
-                                    Cancel Order
-                                </button>
-                            </div>
-                        ` : ''}
-                    v>
+                </div>
                 <h2 class="text-2xl font-bold mb-2">Order Confirmed!</h2>
                 <p class="text-gray-600 mb-4">Your order has been placed successfully</p>
                 <div class="bg-gray-50 rounded-lg p-4 text-left mb-6">
                     <div class="text-sm text-gray-600">Order ID: <span class="font-mono">${order.id.slice(0, 8)}</span></div>
-                    <div class="text-sm text-gray-600">Total: <span class="font-bold text-green-600">$${order.total_amount.toFixed(2)}</span></div>
+                    <div class="text-sm text-gray-600">Total: <span class="font-bold text-green-600">$${(order.total_amount ?? order.total ?? 0).toFixed(2)}</span></div>
                     ${order.pickup_time ? `<div class="text-sm text-gray-600">Pickup: ${new Date(order.pickup_time).toLocaleString()}</div>` : ''}
                 </div>
+                ${order.status === 'pending' ? `
+                    <div class="mb-4 text-right">
+                        <button onclick="cancelOrder('${order.id}')" class="btn-secondary text-sm px-4 py-2 text-red-600 hover:text-red-700">
+                            Cancel Order
+                        </button>
+                    </div>
+                ` : ''}
                 <button onclick="this.parentElement.parentElement.remove()" class="btn-primary w-full">Continue</button>
             </div>
         `;
@@ -1724,28 +1735,6 @@
             }
         } catch(error) {
             showToast('Network error. Please try again.', 'error');
-        }
-    }
-                <div class="glass-card p-8 max-w-lg mx-4">
-                    <div class="flex items-center space-x-3 mb-6">
-                        <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
-                        </svg>
-                        <div>
-                            <h2 class="text-xl font-bold">AI Recommendations</h2>
-                            <p class="text-gray-600 text-sm">Personalized suggestions for you</p>
-                        </div>
-                    </div>
-                    <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 mb-6">
-                        <p class="text-gray-700">${data.recommendations || 'Based on your preferences, we recommend trying our most popular items!'}</p>
-                    </div>
-                    <button onclick="this.closest('.fixed').remove()" class="btn-primary w-full">Got it!</button>
-                </div>
-            `;
-            document.body.appendChild(modal);
-        } catch(error) {
-            console.error('Failed to get AI recommendations:', error);
-            showToast('Failed to get AI recommendations', 'error');
         }
     }
 
@@ -2087,8 +2076,8 @@
                             <div>Visit us again soon.</div>
                             <div>Generated on ${new Date().toLocaleString()}</div>
                         </div>
-                    </body>
-                    </html>
+                    <\/body>
+                    <\/html>
                 `);
 
                 printWindow.document.close();
@@ -2098,9 +2087,6 @@
         }
     }
 
-        }, 3000);
-    }
-
     function showAdminTab(tabName) {
         // Hide all admin tab contents
         document.querySelectorAll('.admin-tab-content').forEach(content => content.classList.add('hidden'));
@@ -2108,11 +2094,21 @@
         // Remove active class from all tabs
         document.querySelectorAll('.admin-tab').forEach(tab => tab.classList.remove('active'));
 
+        const targetContent = document.getElementById(`admin-${tabName}`);
+        const targetTab = document.getElementById(`tab-${tabName}`);
+
+        if(!targetContent || !targetTab) {
+            showToast('This admin section is unavailable.', 'warning');
+            document.getElementById('admin-overview').classList.remove('hidden');
+            document.getElementById('tab-overview').classList.add('active');
+            return;
+        }
+
         // Show selected tab content
-        document.getElementById(`admin-${tabName}`).classList.remove('hidden');
+        targetContent.classList.remove('hidden');
 
         // Add active class to selected tab
-        document.getElementById(`tab-${tabName}`).classList.add('active');
+        targetTab.classList.add('active');
 
         // Load tab-specific data
         if(tabName === 'orders') loadAdminOrders();
@@ -2120,7 +2116,6 @@
         if(tabName === 'inventory') loadInventory();
         if(tabName === 'analytics') loadAnalytics();
         if(tabName === 'feedback') loadFeedback();
-        if(tabName === 'profile') loadProfile();
     }
 
     async function loadAdminMenu() {
@@ -2308,10 +2303,7 @@
                                     ${item.category}
                                 </span>
                                 <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${item.is_available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-                                    ${i
-    window.loadProfile = loadProfile;
-    window.handleUpdateProfile = handleUpdateProfile;
-    window.cancelOrder = cancelOrder;tem.is_available ? 'In Stock' : 'Out of Stock'}
+                                    ${item.is_available ? 'In Stock' : 'Out of Stock'}
                                 </span>
                             </div>
                             <div class="text-lg font-semibold text-gray-700">Stock: ${item.stock_quantity || 0}</div>
@@ -2378,10 +2370,7 @@
 
             // Update metrics
             document.getElementById('completion-rate').textContent = `${data.completion_rate.toFixed(1)}%`;
-            document.getElementById('av
-    window.loadProfile = loadProfile;
-    window.handleUpdateProfile = handleUpdateProfile;
-    window.cancelOrder = cancelOrder;g-order-value').textContent = `$${data.avg_order_value.toFixed(2)}`;
+                document.getElementById('avg-order-value').textContent = `$${data.avg_order_value.toFixed(2)}`;
             document.getElementById('peak-hour').textContent = data.peak_hour;
 
             // Create popular items chart
@@ -2485,6 +2474,8 @@
             feedbackList.innerHTML = '<div class="text-center py-12 text-red-600">Failed to load feedback</div>';
         }
     }
+
+    async function loadProfile() {
         const profileLoading = document.getElementById('profile-loading');
         const profileContent = document.getElementById('profile-content');
 
@@ -2498,67 +2489,19 @@
             profileLoading.classList.add('hidden');
             profileContent.classList.remove('hidden');
 
-            document.getElementById('profile-name').value = profile.name || '';
-            document.getElementById('profile-email').value = profile.email || '';
-            document.getElementById('profile-phone').value = profile.phone || '';
+            const fullNameInput = document.getElementById('profile-full-name');
+            const profileEmailInput = document.getElementById('profile-email-input');
+            const profileNameDisplay = document.getElementById('profile-name');
+            const profileEmailDisplay = document.getElementById('profile-email');
+
+            if(fullNameInput) fullNameInput.value = profile.full_name || profile.name || '';
+            if(profileEmailInput) profileEmailInput.value = profile.email || '';
+            if(profileNameDisplay) profileNameDisplay.textContent = profile.full_name || profile.name || 'User';
+            if(profileEmailDisplay) profileEmailDisplay.textContent = profile.email || '';
         } catch(error) {
             console.error('Failed to load profile:', error);
             profileLoading.classList.add('hidden');
             profileContent.innerHTML = '<div class="text-center py-12 text-red-600">Failed to load profile</div>';
-        }
-    }
-
-    async function handleUpdateProfile(event) {
-        event.preventDefault();
-
-        const name = document.getElementById('profile-name').value;
-        const phone = document.getElementById('profile-phone').value;
-
-        const spinner = document.getElementById('profile-spinner');
-        spinner.classList.remove('hidden');
-
-        try {
-            const res = await apiCall('/api/profile', {
-                method: 'PUT',
-                body: JSON.stringify({name, phone})
-            });
-
-            if(res.ok) {
-                showToast('Profile updated successfully!', 'success');
-            } else {
-                const error = await res.json();
-                showToast(error.detail || 'Failed to update profile', 'error');
-            }
-        } catch(error) {
-            showToast('Network error. Please try again.', 'error');
-        } finally {
-            spinner.classList.add('hidden');
-        }
-    }
-
-    async function cancelOrder(orderId) {
-        if(!confirm('Are you sure you want to cancel this order? This action cannot be undone.')) return;
-
-        try {
-            const res = await apiCall(`/api/orders/${orderId}/cancel`, {
-                method: 'PUT'
-            });
-
-            if(res.ok) {
-                showToast('Order cancelled successfully!', 'success');
-                loadOrders();
-            } else {
-                const error = await res.json();
-                showToast(error.detail || 'Failed to cancel order', 'error');
-            }
-        } catch(error) {
-            showToast('Network error. Please try again.', 'error');
-        }
-    }
-
-            console.error('Failed to load feedback:', error);
-            feedbackLoading.classList.add('hidden');
-            feedbackList.innerHTML = '<div class="text-center py-12 text-red-600">Failed to load feedback</div>';
         }
     }
 
