@@ -1,0 +1,5 @@
+# API Keys & Credentials (hide these only)
+.env
+serviceAccountKey.json
+*.key
+*.pem

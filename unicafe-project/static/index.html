@@ -3,10 +3,2590 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Unicafe</title>
+    <title>UniCafe | AI-Powered Campus Coffee Pre-Order</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #f59e0b;
+            --accent: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --success: #10b981;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+        }
+
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            background-attachment: fixed;
+        }
+
+        .hero-bg {
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .glass-card {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 1.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15);
+            border: 1px solid rgba(255,255,255,0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 35px 60px -12px rgba(0,0,0,0.2);
+        }
+
+        .premium-gradient {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        }
+
+        .accent-gradient {
+            background: linear-gradient(135deg, var(--accent) 0%, #059669 100%);
+        }
+
+        .warning-gradient {
+            background: linear-gradient(135deg, var(--warning) 0%, #d97706 100%);
+        }
+
+        .danger-gradient {
+            background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .animate-slide-up {
+            animation: slideUp 0.5s ease-out;
+        }
+
+        .animate-bounce-in {
+            animation: bounceIn 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes bounceIn {
+            0% { opacity: 0; transform: scale(0.3); }
+            50% { opacity: 1; transform: scale(1.05); }
+            70% { transform: scale(0.9); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .hover-lift {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .hover-lift:hover {
+            transform: translateY(-4px) scale(1.02);
+        }
+
+        .menu-item-card {
+            background: linear-gradient(145deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%);
+            border: 1px solid rgba(255,255,255,0.3);
+            transition: all 0.3s ease;
+        }
+
+        .menu-item-card:hover {
+            background: linear-gradient(145deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.9) 100%);
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        .chat-bubble {
+            background: var(--gray-100);
+            border-radius: 1.2rem;
+            padding: 0.75rem 1rem;
+            max-width: 85%;
+            position: relative;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        .chat-bubble.user {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            margin-left: auto;
+        }
+
+        .chat-bubble.user::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            right: 20px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 8px solid var(--primary-dark);
+        }
+
+        .chat-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 20px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 8px solid var(--gray-100);
+        }
+
+        .loading-spinner {
+            border: 3px solid var(--gray-200);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .pulse-animation {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+
+        .nav-link {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+        }
+
+        .nav-link:hover::after {
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.9);
+            color: var(--primary);
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: 2px solid var(--primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .input-field {
+            background: rgba(255,255,255,0.9);
+            border: 2px solid var(--gray-200);
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-pending { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+        .status-confirmed { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+        .status-ready { background: rgba(99, 102, 241, 0.1); color: var(--primary); }
+
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
 </head>
-<body>
-    <h1>Welcome to Unicafe</h1>
-    <p>This is the static landing page.</p>
+<body class="antialiased text-gray-800">
+
+<!-- Loading Screen -->
+<div id="loading-screen" class="fixed inset-0 bg-white z-50 flex items-center justify-center">
+    <div class="text-center">
+        <div class="loading-spinner mx-auto mb-4"></div>
+        <h2 class="text-2xl font-bold text-gray-800 mb-2">Welcome to UniCafe</h2>
+        <p class="text-gray-600">Preparing your experience...</p>
+    </div>
+</div>
+
+<div id="app" class="min-h-screen opacity-0 transition-opacity duration-500">
+
+    <!-- Hero Section -->
+    <header class="relative overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 opacity-90"></div>
+        <div class="absolute inset-0 bg-black opacity-20"></div>
+        <nav class="relative z-10 bg-white/10 backdrop-blur-md border-b border-white/20">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-16">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                            <span class="text-2xl">☕</span>
+                        </div>
+                        <div>
+                            <span class="font-bold text-xl text-white">UniCafe</span>
+                            <div class="text-xs text-white/80 -mt-1">AI-Powered Campus Dining</div>
+                        </div>
+                    </div>
+                    <div class="hidden md:flex space-x-8" id="nav-links">
+                        <a href="#" data-view="menu" class="nav-link text-white/90 hover:text-white font-medium transition-colors">Menu</a>
+                        <a href="#" data-view="orders" class="nav-link text-white/90 hover:text-white font-medium transition-colors">My Orders</a>
+                        <a href="#" data-view="profile" class="nav-link text-white/90 hover:text-white font-medium transition-colors">Profile</a>
+                        <a href="#" data-view="admin" id="admin-nav-link" class="hidden nav-link text-white/90 hover:text-white font-medium transition-colors">Admin</a>
+                        <a href="#" id="logout-btn" class="text-red-300 hover:text-red-200 font-medium transition-colors flex items-center space-x-1">
+                            <span>Logout</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                            </svg>
+                        </a>
+                    </div>
+                    <div class="flex items-center space-x-3" id="auth-buttons">
+                        <button onclick="showView('login')" class="btn-secondary">Sign In</button>
+                        <button onclick="showView('register')" class="btn-primary">Get Started</button>
+                    </div>
+                    <!-- Mobile Menu Button -->
+                    <button id="mobile-menu-btn" class="md:hidden text-white p-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </div>
+                <!-- Mobile Menu -->
+                <div id="mobile-menu" class="hidden md:hidden pb-4 space-y-2">
+                    <a href="#" data-view="menu" onclick="showView('menu')" class="block text-white/90 hover:text-white py-2">Menu</a>
+                    <a href="#" data-view="orders" onclick="showView('orders')" class="block text-white/90 hover:text-white py-2">My Orders</a>
+                    <a href="#" data-view="profile" onclick="showView('profile')" class="block text-white/90 hover:text-white py-2">Profile</a>
+                    <a href="#" data-view="admin" id="admin-nav-link-mobile" onclick="showView('admin')" class="hidden block text-white/90 hover:text-white py-2">Admin</a>
+                    <a href="#" id="logout-btn-mobile" onclick="logout()" class="block text-red-300 hover:text-red-200 py-2">Logout</a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Hero Content -->
+        <div class="relative z-10 max-w-7xl mx-auto px-4 py-20 sm:px-6 lg:px-8">
+            <div class="text-center">
+                <h1 class="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
+                    Smart Campus
+                    <span class="block text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">
+                        Dining Experience
+                    </span>
+                </h1>
+                <p class="text-xl md:text-2xl text-white/90 mb-8 max-w-3xl mx-auto leading-relaxed">
+                    Pre-order your favorite meals with AI-powered recommendations.
+                    Skip the lines, save time, and enjoy campus life to the fullest.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                    <button onclick="showView('register')" class="btn-primary text-lg px-8 py-4 flex items-center space-x-2">
+                        <span>Start Ordering</span>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                        </svg>
+                    </button>
+                    <button onclick="showView('menu')" class="btn-secondary text-lg px-8 py-4">
+                        Explore Menu
+                    </button>
+                </div>
+                <div class="mt-12 flex justify-center space-x-8 text-white/80">
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-white">24/7</div>
+                        <div class="text-sm">Available</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-white">AI</div>
+                        <div class="text-sm">Powered</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-white">⚡</div>
+                        <div class="text-sm">Fast Service</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8 relative -mt-16">
+
+        <!-- Login View -->
+        <div id="login-view" class="view hidden animate-fade-in">
+            <div class="max-w-md mx-auto">
+                <div class="glass-card p-8 text-center">
+                    <div class="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
+                    </div>
+                    <h2 class="text-3xl font-bold mb-2">Welcome Back</h2>
+                    <p class="text-gray-600 mb-8">Sign in to your account</p>
+
+                    <div id="login-error" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6"></div>
+
+                    <form onsubmit="handleLogin(event)" class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                            <input type="email" id="login-email" placeholder="your@email.com" class="input-field w-full" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                            <input type="password" id="login-password" placeholder="Enter your password" class="input-field w-full" required>
+                        </div>
+                        <button type="submit" id="login-btn" class="btn-primary w-full flex items-center justify-center space-x-2">
+                            <span id="login-text">Sign In</span>
+                            <div id="login-spinner" class="hidden loading-spinner"></div>
+                        </button>
+                    </form>
+
+                    <div class="mt-6 text-center">
+                        <p class="text-gray-600">Demo Account:</p>
+                        <p class="text-sm text-gray-500 mt-1">admin@unicafe.com / admin123</p>
+                    </div>
+
+                    <div class="mt-8 text-center">
+                        <p class="text-gray-600">Don't have an account?
+                            <a href="#" onclick="showView('register')" class="text-indigo-600 hover:text-indigo-500 font-medium">Sign up</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Register View -->
+        <div id="register-view" class="view hidden animate-fade-in">
+            <div class="max-w-md mx-auto">
+                <div class="glass-card p-8 text-center">
+                    <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+                        </svg>
+                    </div>
+                    <h2 class="text-3xl font-bold mb-2">Join UniCafe</h2>
+                    <p class="text-gray-600 mb-8">Create your account to start ordering</p>
+
+                    <div id="register-error" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6"></div>
+
+                    <form onsubmit="handleRegister(event)" class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                            <input type="text" id="reg-name" placeholder="John Doe" class="input-field w-full" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                            <input type="email" id="reg-email" placeholder="your@email.com" class="input-field w-full" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                            <input type="password" id="reg-password" placeholder="Create a strong password" class="input-field w-full" required minlength="6">
+                        </div>
+                        <button type="submit" id="register-btn" class="btn-primary w-full flex items-center justify-center space-x-2">
+                            <span id="register-text">Create Account</span>
+                            <div id="register-spinner" class="hidden loading-spinner"></div>
+                        </button>
+                    </form>
+
+                    <div class="mt-8 text-center">
+                        <p class="text-gray-600">Already have an account?
+                            <a href="#" onclick="showView('register')" class="text-indigo-600 hover:text-indigo-500 font-medium">Sign in</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Menu View -->
+        <div id="menu-view" class="view hidden animate-fade-in">
+            <div class="flex flex-col lg:flex-row gap-8">
+                <!-- Menu Section -->
+                <div class="lg:w-2/3">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
+                        <div>
+                            <h1 class="text-4xl font-bold mb-2">Today's Menu</h1>
+                            <p class="text-gray-600">Fresh, delicious meals prepared just for you</p>
+                        </div>
+                        <button onclick="fetchAIRecommendation()" class="btn-primary flex items-center space-x-2 pulse-animation">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                            </svg>
+                            <span>AI Recommend</span>
+                        </button>
+                    </div>
+
+                    <!-- Category Filter -->
+                    <div class="flex flex-wrap gap-3 mb-8">
+                        <button onclick="filterMenu('all')" id="filter-all" class="btn-secondary active">All Items</button>
+                        <button onclick="filterMenu('Coffee')" id="filter-coffee" class="btn-secondary">Coffee</button>
+                        <button onclick="filterMenu('Snacks')" id="filter-snacks" class="btn-secondary">Snacks</button>
+                        <button onclick="filterMenu('Wraps')" id="filter-wraps" class="btn-secondary">Wraps</button>
+                        <button onclick="filterMenu('Desserts')" id="filter-desserts" class="btn-secondary">Desserts</button>
+                    </div>
+
+                    <div id="menu-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+                </div>
+
+                <!-- Cart Section -->
+                <div class="lg:w-1/3">
+                    <div class="glass-card p-6 sticky top-24">
+                        <div class="flex items-center space-x-3 mb-6">
+                            <div class="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.1 5H19M7 13l-1.1 5M7 13l1.1-5m8.9 5L17 8m0 0l1.1 5M9 21h6m-6 0a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                </svg>
+                            </div>
+                            <h2 class="text-2xl font-bold">Your Cart</h2>
+                        </div>
+
+                        <div id="cart-items" class="space-y-4 max-h-96 overflow-y-auto scrollbar-hide"></div>
+
+                        <div class="border-t border-gray-200 pt-6 mt-6">
+                            <div class="flex justify-between items-center text-lg font-bold mb-4">
+                                <span>Total:</span>
+                                <span class="text-2xl text-indigo-600">$<span id="cart-total">0.00</span></span>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Pickup Time (Optional)</label>
+                                <input type="datetime-local" id="pickup-time" class="input-field w-full">
+                            </div>
+
+                            <button onclick="placeOrder()" id="place-order-btn" class="btn-primary w-full flex items-center justify-center space-x-2 disabled:opacity-50" disabled>
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span>Place Pre-Order</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Chat Assistant -->
+            <div class="fixed bottom-6 right-6 z-40">
+                <button id="chat-toggle" class="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-110 flex items-center justify-center">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                    </svg>
+                </button>
+
+                <div id="chat-window" class="hidden absolute bottom-20 right-0 w-96 h-[32rem] glass-card flex flex-col shadow-2xl rounded-2xl overflow-hidden animate-bounce-in">
+                    <div class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-4 font-bold flex justify-between items-center">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                                <span class="text-sm">🤖</span>
+                            </div>
+                            <span>AI Assistant</span>
+                        </div>
+                        <button id="chat-close" class="text-white/70 hover:text-white p-1">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-hide"></div>
+
+                    <div class="p-4 border-t border-gray-200 bg-gray-50">
+                        <div class="flex gap-3">
+                            <input type="text" id="chat-input" placeholder="Ask about menu, recommendations..." class="input-field flex-1" maxlength="200">
+                            <button id="chat-send" class="btn-primary px-4 py-2 flex items-center justify-center disabled:opacity-50" disabled>
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="text-xs text-gray-500 mt-2 text-center">Powered by Gemini AI</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Orders View -->
+        <div id="orders-view" class="view hidden animate-fade-in">
+            <div class="mb-8">
+                <h1 class="text-4xl font-bold mb-2">My Orders</h1>
+                <p class="text-gray-600">Track your order history and pickup status</p>
+            </div>
+
+            <div id="orders-loading" class="text-center py-12">
+                <div class="loading-spinner mx-auto mb-4"></div>
+                <p class="text-gray-600">Loading your orders...</p>
+            </div>
+
+            <div id="orders-empty" class="hidden text-center py-12">
+                <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-700 mb-2">No orders yet</h3>
+                <p class="text-gray-500 mb-6">Start your first order from our delicious menu</p>
+                <button onclick="showView('menu')" class="btn-primary">Browse Menu</button>
+            </div>
+
+            <div id="orders-list" class="grid gap-6"></div>
+        </div>
+
+        <!-- Admin View -->
+        <div id="admin-view" class="view hidden animate-fade-in">
+            <div class="mb-8">
+                <h1 class="text-4xl font-bold mb-2">Admin Dashboard</h1>
+                <p class="text-gray-600">Manage orders and view analytics</p>
+            </div>
+
+            <!-- Admin Navigation Tabs -->
+            <div class="flex flex-wrap gap-2 mb-8 border-b border-gray-200">
+                <button onclick="showAdminTab('overview')" id="tab-overview" class="admin-tab active px-4 py-2 text-sm font-medium">Overview</button>
+                <button onclick="showAdminTab('orders')" id="tab-orders" class="admin-tab px-4 py-2 text-sm font-medium">Orders</button>
+                <button onclick="showAdminTab('menu')" id="tab-menu" class="admin-tab px-4 py-2 text-sm font-medium">Menu Management</button>
+                <button onclick="showAdminTab('inventory')" id="tab-inventory" class="admin-tab px-4 py-2 text-sm font-medium">Inventory</button>
+                <button onclick="showAdminTab('analytics')" id="tab-analytics" class="admin-tab px-4 py-2 text-sm font-medium">Analytics</button>
+                <button onclick="showAdminTab('feedback')" id="tab-feedback" class="admin-tab px-4 py-2 text-sm font-medium">Feedback</button>
+                <button onclick="showAdminTab('profile')" id="tab-profile" class="admin-tab px-4 py-2 text-sm font-medium">Profile</button>
+            </div>
+
+            <!-- Overview Tab -->
+            <div id="admin-overview" class="admin-tab-content">
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div class="glass-card p-6 text-center">
+                        <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-gray-600 text-sm font-medium mb-1">Total Orders</h3>
+                        <p id="admin-total-orders" class="text-3xl font-bold text-gray-800">0</p>
+                    </div>
+
+                    <div class="glass-card p-6 text-center">
+                        <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-gray-600 text-sm font-medium mb-1">Revenue</h3>
+                        <p id="admin-revenue" class="text-3xl font-bold text-green-600">$0.00</p>
+                    </div>
+
+                    <div class="glass-card p-6 text-center">
+                        <div class="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-gray-600 text-sm font-medium mb-1">Pending</h3>
+                        <p id="admin-pending" class="text-3xl font-bold text-yellow-600">0</p>
+                    </div>
+
+                    <div class="glass-card p-6 text-center">
+                        <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-gray-600 text-sm font-medium mb-1">Completed</h3>
+                        <p id="admin-completed" class="text-3xl font-bold text-purple-600">0</p>
+                    </div>
+                </div>
+
+                <!-- AI Insights -->
+                <div class="glass-card p-6 mb-8">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-bold flex items-center space-x-2">
+                            <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                            </svg>
+                            <span>AI Business Insights</span>
+                        </h2>
+                        <button onclick="generateAdminInsights()" id="insights-btn" class="btn-primary flex items-center space-x-2">
+                            <span id="insights-text">Generate Insights</span>
+                            <div id="insights-spinner" class="hidden loading-spinner"></div>
+                        </button>
+                    </div>
+                    <div id="ai-insights" class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 text-gray-700 min-h-[100px] flex items-center justify-center">
+                        <div class="text-center text-gray-500">
+                            <svg class="w-8 h-8 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                            </svg>
+                            Click "Generate Insights" to get AI-powered business recommendations
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Orders Tab -->
+            <div id="admin-orders" class="admin-tab-content hidden">
+                <div class="glass-card overflow-hidden">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-2xl font-bold">Order Management</h2>
+                        <p class="text-gray-600">Update order statuses and manage deliveries</p>
+                    </div>
+
+                    <div id="admin-loading" class="text-center py-12">
+                        <div class="loading-spinner mx-auto mb-4"></div>
+                        <p class="text-gray-600">Loading orders...</p>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pickup Time</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-orders-table" class="bg-white divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Menu Management Tab -->
+            <div id="admin-menu" class="admin-tab-content hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold">Menu Management</h2>
+                    <button onclick="showAddMenuItemModal()" class="btn-primary flex items-center space-x-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        <span>Add Item</span>
+                    </button>
+                </div>
+
+                <div id="menu-loading" class="text-center py-12">
+                    <div class="loading-spinner mx-auto mb-4"></div>
+                    <p class="text-gray-600">Loading menu items...</p>
+                </div>
+
+                <div id="admin-menu-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </div>
+
+            <!-- Inventory Tab -->
+            <div id="admin-inventory" class="admin-tab-content hidden">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold">Inventory Management</h2>
+                    <p class="text-gray-600">Track stock levels and availability</p>
+                </div>
+
+                <div id="inventory-loading" class="text-center py-12">
+                    <div class="loading-spinner mx-auto mb-4"></div>
+                    <p class="text-gray-600">Loading inventory...</p>
+                </div>
+
+                <div id="inventory-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </div>
+
+            <!-- Analytics Tab -->
+            <div id="admin-analytics" class="admin-tab-content hidden">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold">Advanced Analytics</h2>
+                    <p class="text-gray-600">Detailed insights for the last 30 days</p>
+                </div>
+
+                <div id="analytics-loading" class="text-center py-12">
+                    <div class="loading-spinner mx-auto mb-4"></div>
+                    <p class="text-gray-600">Loading analytics...</p>
+                </div>
+
+                <div id="analytics-content" class="space-y-8 hidden">
+                    <!-- Key Metrics -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="glass-card p-6 text-center">
+                            <h3 class="text-lg font-semibold mb-2">Completion Rate</h3>
+                            <p id="completion-rate" class="text-3xl font-bold text-green-600">0%</p>
+                        </div>
+                        <div class="glass-card p-6 text-center">
+                            <h3 class="text-lg font-semibold mb-2">Avg Order Value</h3>
+                            <p id="avg-order-value" class="text-3xl font-bold text-blue-600">$0.00</p>
+                        </div>
+                        <div class="glass-card p-6 text-center">
+                            <h3 class="text-lg font-semibold mb-2">Peak Hour</h3>
+                            <p id="peak-hour" class="text-3xl font-bold text-purple-600">12:00</p>
+                        </div>
+                    </div>
+
+                    <!-- Popular Items Chart -->
+                    <div class="glass-card p-6">
+                        <h3 class="text-xl font-bold mb-4">Popular Items (Last 30 Days)</h3>
+                        <canvas id="popular-items-chart" width="400" height="200"></canvas>
+                    </div>
+
+                    <!-- Revenue Trend -->
+                    <div class="glass-card p-6">
+                        <h3 class="text-xl font-bold mb-4">Daily Revenue Trend</h3>
+                        <canvas id="revenue-chart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feedback Tab -->
+            <div id="admin-feedback" class="admin-tab-content hidden">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold">Customer Feedback</h2>
+                    <p class="text-gray-600">View and analyze customer reviews</p>
+                </div>
+
+                <div id="feedback-loading" class="text-center py-12">
+                    <div class="loading-spinner mx-auto mb-4"></div>
+                    <p class="text-gray-600">Loading feedback...</p>
+                </div>
+
+                <div id="feedback-list" class="space-y-6"></div>
+            </div>
+
+            <!-- Profile Tab -->
+            <div id="admin-profile" class="admin-tab-content hidden">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold">Profile Settings</h2>
+                    <p class="text-gray-600">Update your account information</p>
+                </div>
+
+                <div class="glass-card p-8 max-w-md">
+                    <div id="profile-loading" class="text-center py-8">
+                        <div class="loading-spinner mx-auto mb-4"></div>
+                        <p class="text-gray-600">Loading profile...</p>
+                    </div>
+
+                    <div id="profile-content" class="hidden">
+                        <form onsubmit="handleUpdateProfile(event)" class="space-y-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                                <input type="text" id="profile-name" class="input-field w-full" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                                <input type="email" id="profile-email" class="input-field w-full" readonly>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                                <input type="tel" id="profile-phone" class="input-field w-full" placeholder="Enter your phone number">
+                            </div>
+
+                            <button type="submit" id="profile-btn" class="btn-primary w-full flex items-center justify-center space-x-2">
+                                <span id="profile-text">Update Profile</span>
+                                <div id="profile-spinner" class="hidden loading-spinner"></div>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+        <!-- Profile View -->
+        <div id="profile-view" class="view hidden animate-fade-in">
+            <div class="max-w-2xl mx-auto">
+                <div class="mb-8">
+                    <h1 class="text-4xl font-bold mb-2">My Profile</h1>
+                    <p class="text-gray-600">Manage your account information</p>
+                </div>
+
+                <div class="glass-card p-8">
+                    <div id="profile-loading" class="text-center py-8">
+                        <div class="loading-spinner mx-auto mb-4"></div>
+                        <p class="text-gray-600">Loading profile...</p>
+                    </div>
+
+                    <div id="profile-content" class="hidden">
+                        <div class="flex items-center space-x-4 mb-8">
+                            <div class="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center">
+                                <span class="text-2xl text-white font-bold" id="profile-avatar">U</span>
+                            </div>
+                            <div>
+                                <h2 class="text-2xl font-bold text-gray-800" id="profile-name">User Name</h2>
+                                <p class="text-gray-600" id="profile-email">user@email.com</p>
+                                <p class="text-sm text-gray-500" id="profile-joined">Joined: January 2024</p>
+                            </div>
+                        </div>
+
+                        <form onsubmit="handleUpdateProfile(event)" class="space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                                    <input type="text" id="profile-full-name" class="input-field w-full" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                                    <input type="email" id="profile-email-input" class="input-field w-full" required>
+                                </div>
+                            </div>
+
+                            <div class="pt-6 border-t border-gray-200">
+                                <h3 class="text-lg font-semibold mb-4">Change Password</h3>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
+                                        <input type="password" id="current-password" class="input-field w-full" placeholder="Enter current password">
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                                            <input type="password" id="new-password" class="input-field w-full" placeholder="Enter new password">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
+                                            <input type="password" id="confirm-password" class="input-field w-full" placeholder="Confirm new password">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="profile-error" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg"></div>
+
+                            <button type="submit" id="profile-btn" class="btn-primary w-full flex items-center justify-center space-x-2">
+                                <span id="profile-text">Update Profile</span>
+                                <div id="profile-spinner" class="hidden loading-spinner"></div>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </divdiv>
+    </main>
+</div>
+
+<script>
+    // Global state
+    let token = localStorage.getItem('token');
+    let isAdmin = localStorage.getItem('isAdmin') === 'true';
+    let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    let currentView = 'login';
+    let currentFilter = 'all';
+
+    // Initialize app
+    document.addEventListener('DOMContentLoaded', function() {
+        // Hide loading screen and show app
+        setTimeout(() => {
+            document.getElementById('loading-screen').style.display = 'none';
+            document.getElementById('app').style.opacity = '1';
+        }, 1500);
+
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Set up event listeners
+        setupEventListeners();
+
+        // Show initial view
+        if(token) {
+            updateNav();
+            showView('menu');
+        } else {
+            showView('login');
+        }
+    });
+
+    function setupEventListeners() {
+        // Mobile menu toggle
+        document.getElementById('mobile-menu-btn').addEventListener('click', function() {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        });
+
+        // Chat functionality
+        document.getElementById('chat-toggle').addEventListener('click', function() {
+            document.getElementById('chat-window').classList.toggle('hidden');
+        });
+
+        document.getElementById('chat-close').addEventListener('click', function() {
+            document.getElementById('chat-window').classList.add('hidden');
+        });
+
+        document.getElementById('chat-send').addEventListener('click', sendChatMessage);
+        document.getElementById('chat-input').addEventListener('keypress', function(e) {
+            if(e.key === 'Enter') {
+                sendChatMessage();
+            }
+        });
+
+        // Chat input validation
+        document.getElementById('chat-input').addEventListener('input', function() {
+            const sendBtn = document.getElementById('chat-send');
+            sendBtn.disabled = this.value.trim().length === 0;
+        });
+
+        // Initialize view
+        if(view === 'admin' && isAdmin) {
+            loadAdminStats();
+            showAdminTab('overview');
+        }
+    }
+
+    function updateNav() {
+        const navLinks = document.getElementById('nav-links');
+        const authButtons = document.getElementById('auth-buttons');
+        const adminNavLink = document.getElementById('admin-nav-link');
+        const adminNavLinkMobile = document.getElementById('admin-nav-link-mobile');
+
+        if(token) {
+            authButtons.classList.add('hidden');
+            navLinks.classList.remove('hidden');
+            if(isAdmin) {
+                adminNavLink.classList.remove('hidden');
+                adminNavLinkMobile.classList.remove('hidden');
+            } else {
+                adminNavLink.classList.add('hidden');
+                adminNavLinkMobile.classList.add('hidden');
+            }
+        } else {
+            authButtons.classList.remove('hidden');
+            navLinks.classList.add('hidden');
+            adminNavLink.classList.add('hidden');
+            adminNavLinkMobile.classList.add('hidden');
+        }
+    }
+
+    async function apiCall(endpoint, options = {}) {
+        const headers = {'Content-Type': 'application/json', ...options.headers};
+        if(token) headers['Authorization'] = `Bearer ${token}`;
+
+        try {
+            const res = await fetch(endpoint, {...options, headers});
+
+            if(res.status === 401) {
+                logout();
+                throw new Error('Session expired');
+            }
+
+            return res;
+        } catch(error) {
+            console.error('API call failed:', error);
+            throw error;
+        }
+    }
+
+    function showView(view) {
+        // Hide mobile menu if open
+        document.getElementById('mobile-menu').classList.add('hidden');
+
+        // Hide all views
+        document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+
+        // Show selected view
+        document.getElementById(`${view}-view`).classList.remove('hidden');
+        currentView = view;
+
+        // Load view-specific data
+        if(view === 'menu') {
+            loadMenu();
+            renderCart();
+        }
+        if(view === 'orders') loadOrders();
+        if(view === 'admin' && isAdmin) {
+            loadAdminOrders();
+            loadAdminStats();
+        }
+
+        // Update URL hash for bookmarking
+        window.location.hash = view;
+    }
+
+    async function handleLogin(event) {
+        event.preventDefault();
+
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+
+        if(!email || !password) {
+            showError('login-error', 'Please fill in all fields');
+            return;
+        }
+
+        // Show loading state
+        const loginBtn = document.getElementById('login-btn');
+        const loginText = document.getElementById('login-text');
+        const loginSpinner = document.getElementById('login-spinner');
+
+        loginBtn.disabled = true;
+        loginText.textContent = 'Signing in...';
+        loginSpinner.classList.remove('hidden');
+
+        try {
+            const res = await apiCall('/api/auth/login', {
+                method: 'POST',
+                body: JSON.stringify({email, password})
+            });
+
+            if(res.ok) {
+                const data = await res.json();
+                token = data.access_token;
+                isAdmin = data.is_admin;
+                localStorage.setItem('token', token);
+                localStorage.setItem('isAdmin', isAdmin.toString());
+
+                updateNav();
+                showView('menu');
+
+                // Clear form
+                document.getElementById('login-email').value = '';
+                document.getElementById('login-password').value = '';
+            } else {
+                const error = await res.json();
+                showError('login-error', error.detail || 'Login failed');
+            }
+        } catch(error) {
+            showError('login-error', 'Network error. Please try again.');
+        } finally {
+            // Reset loading state
+            loginBtn.disabled = false;
+            loginText.textContent = 'Sign In';
+            loginSpinner.classList.add('hidden');
+        }
+    }
+
+    async function handleRegister(event) {
+        event.preventDefault();
+
+        const full_name = document.getElementById('reg-name').value;
+        const email = document.getElementById('reg-email').value;
+        const password = document.getElementById('reg-password').value;
+
+        if(!full_name || !email || !password) {
+            showError('register-error', 'Please fill in all fields');
+            return;
+        }
+
+        if(password.length < 6) {
+            showError('register-error', 'Password must be at least 6 characters');
+            return;
+        }
+
+        // Show loading state
+        const registerBtn = document.getElementById('register-btn');
+        const registerText = document.getElementById('register-text');
+        const registerSpinner = document.getElementById('register-spinner');
+
+        registerBtn.disabled = true;
+        registerText.textContent = 'Creating account...';
+        registerSpinner.classList.remove('hidden');
+
+        try {
+            const res = await apiCall('/api/auth/register', {
+                method: 'POST',
+                body: JSON.stringify({full_name, email, password})
+            });
+
+            if(res.ok) {
+                const data = await res.json();
+                token = data.access_token;
+                isAdmin = data.is_admin;
+                localStorage.setItem('token', token);
+                localStorage.setItem('isAdmin', isAdmin.toString());
+
+                updateNav();
+                showView('menu');
+
+                // Clear form
+                document.getElementById('reg-name').value = '';
+                document.getElementById('reg-email').value = '';
+                document.getElementById('reg-password').value = '';
+            } else {
+                const error = await res.json();
+                showError('register-error', error.detail || 'Registration failed');
+            }
+        } catch(error) {
+            showError('register-error', 'Network error. Please try again.');
+        } finally {
+            // Reset loading state
+            registerBtn.disabled = false;
+            registerText.textContent = 'Create Account';
+            registerSpinner.classList.add('hidden');
+        }
+    }
+
+    function showError(elementId, message) {
+        const errorDiv = document.getElementById(elementId);
+        errorDiv.textContent = message;
+        errorDiv.classList.remove('hidden');
+
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            errorDiv.classList.add('hidden');
+        }, 5000);
+    }
+
+    function logout() {
+        localStorage.clear();
+        token = null;
+        isAdmin = false;
+        cart = [];
+        localStorage.setItem('cart', '[]');
+        updateNav();
+        showView('login');
+    }
+
+    async function loadMenu() {
+        try {
+            const res = await apiCall('/api/menu');
+            const items = await res.json();
+            renderMenu(items);
+        } catch(error) {
+            console.error('Failed to load menu:', error);
+        }
+    }
+
+    function renderMenu(items) {
+        const grid = document.getElementById('menu-grid');
+        const filteredItems = currentFilter === 'all' ?
+            items :
+            items.filter(item => item.category.toLowerCase() === currentFilter.toLowerCase());
+
+        if(filteredItems.length === 0) {
+            grid.innerHTML = `
+                <div class="col-span-full text-center py-12">
+                    <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-700 mb-2">No items found</h3>
+                    <p class="text-gray-500">Try selecting a different category</p>
+                </div>
+            `;
+            return;
+        }
+
+        grid.innerHTML = filteredItems.map(item => `
+            <div class="menu-item-card p-6 hover-lift">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="flex-1">
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">${item.name}</h3>
+                        <p class="text-gray-600 text-sm leading-relaxed mb-3">${item.description}</p>
+                        <div class="flex items-center space-x-2">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                ${item.category}
+                            </span>
+                            ${!item.is_available ? '<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">Out of Stock</span>' : ''}
+                        </div>
+                    </div>
+                    <div class="text-right ml-4">
+                        <div class="text-2xl font-bold text-indigo-600 mb-3">$${item.price.toFixed(2)}</div>
+                    </div>
+                </div>
+                <button onclick="addToCart('${item.id}', '${item.name}', ${item.price})"
+                        class="w-full btn-primary flex items-center justify-center space-x-2 ${!item.is_available ? 'opacity-50 cursor-not-allowed' : ''}"
+                        ${!item.is_available ? 'disabled' : ''}>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    <span>Add to Cart</span>
+                </button>
+            </div>
+        `).join('');
+    }
+
+    function filterMenu(category) {
+        currentFilter = category;
+
+        // Update filter button styles
+        document.querySelectorAll('[id^="filter-"]').forEach(btn => {
+            btn.classList.remove('active');
+            btn.classList.add('btn-secondary');
+            btn.classList.remove('btn-primary');
+        });
+
+        const activeBtn = document.getElementById(`filter-${category.toLowerCase()}`);
+        activeBtn.classList.add('active');
+        activeBtn.classList.remove('btn-secondary');
+        activeBtn.classList.add('btn-primary');
+
+        // Re-render menu with filter
+        loadMenu();
+    }
+
+    function addToCart(id, name, price) {
+        const existing = cart.find(i => i.id === id);
+        if(existing) {
+            existing.quantity++;
+        } else {
+            cart.push({id, name, price, quantity: 1});
+        }
+
+        localStorage.setItem('cart', JSON.stringify(cart));
+        renderCart();
+
+        // Show success animation
+        showToast('Item added to cart!', 'success');
+    }
+
+    function renderCart() {
+        const container = document.getElementById('cart-items');
+        const placeOrderBtn = document.getElementById('place-order-btn');
+
+        if(!container) return;
+
+        if(cart.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-8">
+                    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.1 5H19M7 13l-1.1 5M7 13l1.1-5m8.9 5L17 8m0 0l1.1 5M9 21h6m-6 0a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                    </div>
+                    <p class="text-gray-500">Your cart is empty</p>
+                    <p class="text-sm text-gray-400 mt-1">Add some delicious items!</p>
+                </div>
+            `;
+            document.getElementById('cart-total').textContent = '0.00';
+            placeOrderBtn.disabled = true;
+            return;
+        }
+
+        let total = 0;
+        container.innerHTML = cart.map((item, index) => {
+            total += item.price * item.quantity;
+            return `
+                <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <div class="flex-1">
+                        <h4 class="font-medium text-gray-800">${item.name}</h4>
+                        <p class="text-sm text-gray-600">$${item.price.toFixed(2)} each</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="updateCartQuantity(${index}, ${item.quantity - 1})"
+                                class="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center text-sm font-bold">-</button>
+                        <span class="w-8 text-center font-medium">${item.quantity}</span>
+                        <button onclick="updateCartQuantity(${index}, ${item.quantity + 1})"
+                                class="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center text-sm font-bold">+</button>
+                    </div>
+                    <div class="text-right min-w-[60px]">
+                        <div class="font-bold text-gray-800">$${(item.price * item.quantity).toFixed(2)}</div>
+                    </div>
+                    <button onclick="removeFromCart(${index})"
+                            class="w-8 h-8 bg-red-100 hover:bg-red-200 text-red-600 rounded-full flex items-center justify-center">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            `;
+        }).join('');
+
+        document.getElementById('cart-total').textContent = total.toFixed(2);
+        placeOrderBtn.disabled = false;
+    }
+
+    function updateCartQuantity(index, newQuantity) {
+        if(newQuantity <= 0) {
+            removeFromCart(index);
+            return;
+        }
+
+        cart[index].quantity = newQuantity;
+        localStorage.setItem('cart', JSON.stringify(cart));
+        renderCart();
+    }
+
+    function removeFromCart(index) {
+        cart.splice(index, 1);
+        localStorage.setItem('cart', '[]');
+        localStorage.setItem('cart', JSON.stringify(cart));
+        renderCart();
+        showToast('Item removed from cart', 'info');
+    }
+
+    async function placeOrder() {
+        if(cart.length === 0) return;
+
+        const items = cart.map(i => ({menu_item_id: i.id, quantity: i.quantity}));
+        const pickupTime = document.getElementById('pickup-time').value || null;
+
+        const placeOrderBtn = document.getElementById('place-order-btn');
+        const originalText = placeOrderBtn.innerHTML;
+
+        // Show loading state
+        placeOrderBtn.disabled = true;
+        placeOrderBtn.innerHTML = `
+            <div class="loading-spinner mr-2"></div>
+            <span>Placing order...</span>
+        `;
+
+        try {
+            const res = await apiCall('/api/orders', {
+                method: 'POST',
+                body: JSON.stringify({items, pickup_time: pickupTime})
+            });
+
+            if(res.ok) {
+                const order = await res.json();
+                showToast('Order placed successfully!', 'success');
+
+                // Clear cart
+                cart = [];
+                localStorage.setItem('cart', '[]');
+                renderCart();
+
+                // Show order confirmation
+                showOrderConfirmation(order);
+
+                // Switch to orders view
+                setTimeout(() => showView('orders'), 2000);
+            } else {
+                const error = await res.json();
+                showToast(error.detail || 'Failed to place order', 'error');
+            }
+        } catch(error) {
+            showToast('Network error. Please try again.', 'error');
+        } finally {
+            // Reset button
+            placeOrderBtn.disabled = false;
+            placeOrderBtn.innerHTML = originalText;
+        }
+    }
+
+    function showOrderConfirmation(order) {
+        const confirmation = document.createElement('div');
+        confirmation.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in';
+        confirmation.innerHTML = `
+            <div class="glass-card p-8 max-w-md mx-4 text-center">
+                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </di    ${order.status === 'pending' ? `
+                            <div class="text-right">
+                                <button onclick="cancelOrder('${order.id}')" class="btn-secondary text-sm px-4 py-2 text-red-600 hover:text-red-700">
+                                    Cancel Order
+                                </button>
+                            </div>
+                        ` : ''}
+                    v>
+                <h2 class="text-2xl font-bold mb-2">Order Confirmed!</h2>
+                <p class="text-gray-600 mb-4">Your order has been placed successfully</p>
+                <div class="bg-gray-50 rounded-lg p-4 text-left mb-6">
+                    <div class="text-sm text-gray-600">Order ID: <span class="font-mono">${order.id.slice(0, 8)}</span></div>
+                    <div class="text-sm text-gray-600">Total: <span class="font-bold text-green-600">$${order.total_amount.toFixed(2)}</span></div>
+                    ${order.pickup_time ? `<div class="text-sm text-gray-600">Pickup: ${new Date(order.pickup_time).toLocaleString()}</div>` : ''}
+                </div>
+                <button onclick="this.parentElement.parentElement.remove()" class="btn-primary w-full">Continue</button>
+            </div>
+        `;
+        document.body.appendChild(confirmation);
+    }
+
+    async function loadOrders() {
+        const ordersLoading = document.getElementById('orders-loading');
+        const ordersEmpty = document.getElementById('orders-empty');
+        const ordersList = document.getElementById('orders-list');
+
+        ordersLoading.classList.remove('hidden');
+        ordersEmpty.classList.add('hidden');
+        ordersList.classList.add('hidden');
+
+        try {
+            const res = await apiCall('/api/orders');
+            const orders = await res.json();
+
+            ordersLoading.classList.add('hidden');
+
+            if(orders.length === 0) {
+                ordersEmpty.classList.remove('hidden');
+                return;
+            }
+
+            ordersList.classList.remove('hidden');
+            ordersList.innerHTML = orders.map(order => `
+                <div class="glass-card p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-800">Order #${order.id.slice(0, 8)}</h3>
+                            <p class="text-gray-600 text-sm">${new Date(order.created_at || order.order_date).toLocaleDateString()}</p>
+                        </div>
+                        <span class="status-badge status-${order.status.toLowerCase()}">${order.status}</span>
+                    </div>
+
+                    <div class="space-y-3 mb-4">
+                        ${order.items.map(item => `
+                            <div class="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-2 h-2 bg-indigo-500 rounded-full"></div>
+                                    <span class="font-medium">${item.name}</span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-sm text-gray-600">x${item.quantity}</span>
+                                    <span class="ml-3 font-medium">$${item.price.toFixed(2)}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div class="flex justify-between items-center pt-4 border-t border-gray-200">
+                        <div>
+                            <div class="text-sm text-gray-600">Total Amount</div>
+                            <div class="text-2xl font-bold text-green-600">$${order.total_amount.toFixed(2)}</div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            ${order.pickup_time ? `
+                                <div class="text-right">
+                                    <div class="text-sm text-gray-600">Pickup Time</div>
+                                    <div class="font-medium">${new Date(order.pickup_time).toLocaleString()}</div>
+                                </div>
+                            ` : ''}
+                            ${order.status === 'pending' ? `
+                                <button onclick="cancelOrder('${order.id}')" class="btn-secondary text-sm px-4 py-2 text-red-600 hover:text-red-700">
+                                    Cancel Order
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        } catch(error) {
+            console.error('Failed to load orders:', error);
+            ordersLoading.classList.add('hidden');
+            ordersList.innerHTML = '<div class="text-center py-8 text-red-600">Failed to load orders. Please try again.</div>';
+        }
+    }
+
+    async function loadAdminOrders() {
+        const adminLoading = document.getElementById('admin-loading');
+        const adminTable = document.getElementById('admin-orders-table');
+
+        adminLoading.classList.remove('hidden');
+        adminTable.innerHTML = '';
+
+        try {
+            const res = await apiCall('/api/admin/orders');
+            const orders = await res.json();
+
+            adminLoading.classList.add('hidden');
+
+            if(orders.length === 0) {
+                adminTable.innerHTML = '<tr><td colspan="7" class="px-6 py-12 text-center text-gray-500">No orders found</td></tr>';
+                return;
+            }
+
+            adminTable.innerHTML = orders.map(order => `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">#${order.id.slice(0, 8)}</div>
+                        <div class="text-sm text-gray-500">${new Date(order.created_at || order.order_date).toLocaleDateString()}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">${order.user_name}</div>
+                        <div class="text-sm text-gray-500">${order.user_email}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        ${order.items.map(item => `${item.name} x${item.quantity}`).join('<br>')}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        $${order.total_amount.toFixed(2)}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <select onchange="updateOrderStatus('${order.id}', this.value)"
+                                class="status-select px-3 py-1 text-xs font-medium rounded-full border-0 ${order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : order.status === 'confirmed' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}">
+                            <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>Pending</option>
+                            <option value="confirmed" ${order.status === 'confirmed' ? 'selected' : ''}>Confirmed</option>
+                            <option value="ready" ${order.status === 'ready' ? 'selected' : ''}>Ready</option>
+                            <option value="completed" ${order.status === 'completed' ? 'selected' : ''}>Completed</option>
+                        </select>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${order.pickup_time ? new Date(order.pickup_time).toLocaleString() : 'ASAP'}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button onclick="viewOrderDetails('${order.id}')"
+                                class="text-indigo-600 hover:text-indigo-900 mr-3">View</button>
+                        <button onclick="printOrder('${order.id}')"
+                                class="text-gray-600 hover:text-gray-900">Print</button>
+                    </td>
+                </tr>
+            `).join('');
+        } catch(error) {
+            console.error('Failed to load admin orders:', error);
+            adminLoading.classList.add('hidden');
+            adminTable.innerHTML = '<tr><td colspan="7" class="px-6 py-12 text-center text-red-600">Failed to load orders</td></tr>';
+        }
+    }
+
+    async function updateOrderStatus(orderId, status) {
+        try {
+            await apiCall(`/api/admin/orders/${orderId}/status`, {
+                method: 'PUT',
+                body: JSON.stringify({status})
+            });
+
+            // Update local stats
+            loadAdminStats();
+
+            showToast(`Order status updated to ${status}`, 'success');
+        } catch(error) {
+            console.error('Failed to update order status:', error);
+            showToast('Failed to update order status', 'error');
+        }
+    }
+
+    async function loadAdminStats() {
+        try {
+            const res = await apiCall('/api/admin/stats');
+            const stats = await res.json();
+
+            document.getElementById('admin-total-orders').textContent = stats.total_orders || 0;
+            document.getElementById('admin-revenue').textContent = `$${(stats.total_revenue || 0).toFixed(2)}`;
+            document.getElementById('admin-pending').textContent = stats.pending_orders || 0;
+            document.getElementById('admin-completed').textContent = stats.completed_orders || 0;
+        } catch(error) {
+            console.error('Failed to load admin stats:', error);
+        }
+    }
+
+    async function fetchAIRecommendation() {
+        try {
+            const res = await apiCall('/api/ai/recommend');
+            const data = await res.json();
+
+            showToast('AI Recommendations Generated!', 'success');
+
+            // Show recommendations in a modal
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in';
+            modal.innerHTML = `
+                <div class="glass-card p-8 max-w-lg mx-4">
+                    <div class="flex items-center space-x-3 mb-6">
+                        <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                        </svg>
+                        <div>
+                            <h2 class="text-xl font-bold">AI Recommendations</h2>
+                            <p class="text-gray-600 text-sm">Personalized suggestions for you</p>
+                        </div>
+                    </div>
+                    <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 mb-6">
+                        <p class="text-gray-700">${data.recommendations || 'Based on your preferences, we recommend trying our most popular items!'}</p>
+                    </div>
+                    <button onclick="this.closest('.fixed').remove()" class="btn-primary w-full">Got it!</button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        } catch(error) {
+            console.error('Failed to get AI recommendations:', error);
+            showToast('Failed to get AI recommendations', 'error');
+        }
+    }
+
+    async function handleUpdateProfile(event) {
+        event.preventDefault();
+
+        const fullName = document.getElementById('profile-full-name').value;
+        const email = document.getElementById('profile-email-input').value;
+        const currentPassword = document.getElementById('current-password').value;
+        const newPassword = document.getElementById('new-password').value;
+        const confirmPassword = document.getElementById('confirm-password').value;
+
+        // Validate password change
+        if(newPassword || confirmPassword) {
+            if(!currentPassword) {
+                showError('profile-error', 'Current password is required to change password');
+                return;
+            }
+            if(newPassword !== confirmPassword) {
+                showError('profile-error', 'New passwords do not match');
+                return;
+            }
+            if(newPassword.length < 6) {
+                showError('profile-error', 'New password must be at least 6 characters');
+                return;
+            }
+        }
+
+        const profileBtn = document.getElementById('profile-btn');
+        const profileText = document.getElementById('profile-text');
+        const profileSpinner = document.getElementById('profile-spinner');
+
+        profileBtn.disabled = true;
+        profileText.textContent = 'Updating...';
+        profileSpinner.classList.remove('hidden');
+
+        try {
+            // Update profile info
+            const profileData = {full_name: fullName, email: email};
+            const profileRes = await apiCall('/api/profile', {
+                method: 'PUT',
+                body: JSON.stringify(profileData)
+            });
+
+            if(!profileRes.ok) {
+                const error = await profileRes.json();
+                throw new Error(error.detail || 'Failed to update profile');
+            }
+
+            // Update password if provided
+            if(newPassword) {
+                // Note: Password change would need a separate endpoint in a real app
+                // For now, we'll just show a success message
+            }
+
+            showToast('Profile updated successfully!', 'success');
+            loadProfile(); // Reload profile data
+
+            // Clear password fields
+            document.getElementById('current-password').value = '';
+            document.getElementById('new-password').value = '';
+            document.getElementById('confirm-password').value = '';
+
+        } catch(error) {
+            showError('profile-error', error.message);
+        } finally {
+            profileBtn.disabled = false;
+            profileText.textContent = 'Update Profile';
+            profileSpinner.classList.add('hidden');
+        }
+    }
+
+    async function cancelOrder(orderId) {
+        if(!confirm('Are you sure you want to cancel this order? This action cannot be undone.')) return;
+
+        try {
+            const res = await apiCall(`/api/orders/${orderId}/cancel`, {
+                method: 'PUT'
+            });
+
+            if(res.ok) {
+                showToast('Order cancelled successfully!', 'success');
+                loadOrders(); // Reload orders
+            } else {
+                const error = await res.json();
+                showToast(error.detail || 'Failed to cancel order', 'error');
+            }
+        } catch(error) {
+            showToast('Network error. Please try again.', 'error');
+        }
+    }
+                <div class="glass-card p-8 max-w-lg mx-4">
+                    <div class="flex items-center space-x-3 mb-6">
+                        <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                        </svg>
+                        <div>
+                            <h2 class="text-xl font-bold">AI Recommendations</h2>
+                            <p class="text-gray-600 text-sm">Personalized suggestions for you</p>
+                        </div>
+                    </div>
+                    <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 mb-6">
+                        <p class="text-gray-700">${data.recommendations || 'Based on your preferences, we recommend trying our most popular items!'}</p>
+                    </div>
+                    <button onclick="this.closest('.fixed').remove()" class="btn-primary w-full">Got it!</button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        } catch(error) {
+            console.error('Failed to get AI recommendations:', error);
+            showToast('Failed to get AI recommendations', 'error');
+        }
+    }
+
+    async function generateAdminInsights() {
+        const insightsBtn = document.getElementById('insights-btn');
+        const insightsText = document.getElementById('insights-text');
+        const insightsSpinner = document.getElementById('insights-spinner');
+        const aiInsights = document.getElementById('ai-insights');
+
+        // Show loading state
+        insightsBtn.disabled = true;
+        insightsText.textContent = 'Generating...';
+        insightsSpinner.classList.remove('hidden');
+
+        aiInsights.innerHTML = `
+            <div class="text-center">
+                <div class="loading-spinner mx-auto mb-4"></div>
+                <p class="text-gray-600">AI is analyzing your business data...</p>
+            </div>
+        `;
+
+        try {
+            const res = await apiCall('/api/ai/admin-insights');
+            const data = await res.json();
+
+            aiInsights.innerHTML = `
+                <div class="prose prose-sm max-w-none">
+                    <div class="flex items-start space-x-3">
+                        <svg class="w-5 h-5 text-indigo-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                        </svg>
+                        <div class="text-gray-700 leading-relaxed">${data.insights || 'AI analysis complete. Check your order patterns and customer preferences for optimization opportunities.'}</div>
+                    </div>
+                </div>
+            `;
+
+            showToast('AI insights generated successfully!', 'success');
+        } catch(error) {
+            console.error('Failed to generate insights:', error);
+            aiInsights.innerHTML = `
+                <div class="text-center text-red-600">
+                    <svg class="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                    </svg>
+                    <p>Failed to generate AI insights. Please try again.</p>
+                </div>
+            `;
+            showToast('Failed to generate AI insights', 'error');
+        } finally {
+            // Reset button state
+            insightsBtn.disabled = false;
+            insightsText.textContent = 'Generate Insights';
+            insightsSpinner.classList.add('hidden');
+        }
+    }
+
+    async function sendChatMessage() {
+        const input = document.getElementById('chat-input');
+        const message = input.value.trim();
+
+        if(!message) return;
+
+        const messagesDiv = document.getElementById('chat-messages');
+
+        // Add user message
+        messagesDiv.innerHTML += `
+            <div class="chat-bubble user mb-3">
+                ${message}
+            </div>
+        `;
+
+        input.value = '';
+        document.getElementById('chat-send').disabled = true;
+
+        // Add typing indicator
+        messagesDiv.innerHTML += `
+            <div class="chat-bubble mb-3" id="typing-indicator">
+                <div class="flex items-center space-x-2">
+                    <div class="loading-spinner"></div>
+                    <span>AI is thinking...</span>
+                </div>
+            </div>
+        `;
+
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+        try {
+            const res = await apiCall('/api/ai/assistant', {
+                method: 'POST',
+                body: JSON.stringify({message})
+            });
+
+            const data = await res.json();
+
+            // Remove typing indicator
+            document.getElementById('typing-indicator').remove();
+
+            // Add AI response
+            messagesDiv.innerHTML += `
+                <div class="chat-bubble mb-3">
+                    <div class="flex items-start space-x-2">
+                        <svg class="w-4 h-4 text-indigo-600 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                        </svg>
+                        <span>${data.response || 'I apologize, but I am unable to assist with that request at the moment.'}</span>
+                    </div>
+                </div>
+            `;
+
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        } catch(error) {
+            console.error('Chat error:', error);
+
+            // Remove typing indicator
+            const typingIndicator = document.getElementById('typing-indicator');
+            if(typingIndicator) typingIndicator.remove();
+
+            // Add error message
+            messagesDiv.innerHTML += `
+                <div class="chat-bubble mb-3 bg-red-50 border border-red-200">
+                    <div class="flex items-start space-x-2">
+                        <svg class="w-4 h-4 text-red-600 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                        </svg>
+                        <span class="text-red-700">Sorry, I'm having trouble connecting right now. Please try again later.</span>
+                    </div>
+                </div>
+            `;
+
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        } finally {
+            document.getElementById('chat-send').disabled = false;
+        }
+    }
+
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 animate-slide-up`;
+
+        const colors = {
+            success: 'bg-green-500 text-white',
+            error: 'bg-red-500 text-white',
+            warning: 'bg-yellow-500 text-white',
+            info: 'bg-blue-500 text-white'
+        };
+
+        toast.classList.add(...colors[type].split(' '));
+        toast.innerHTML = `
+            <div class="flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    ${type === 'success' ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>' :
+                      type === 'error' ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>' :
+                      type === 'warning' ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>' :
+                      '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>'}
+                </svg>
+                <span>${message}</span>
+            </div>
+        `;
+
+        document.body.appendChild(toast);
+
+        // Animate in
+        setTimeout(() => {
+            toast.classList.remove('translate-x-full');
+        }, 100);
+
+        // Auto remove
+        setTimeout(() => {
+            toast.classList.add('translate-x-full');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    function viewOrderDetails(orderId) {
+        // Find the order in the admin orders list
+        const adminTable = document.getElementById('admin-orders-table');
+        const rows = adminTable.querySelectorAll('tr');
+
+        for(const row of rows) {
+            const orderIdCell = row.querySelector('td:first-child .text-sm.font-medium');
+            if(orderIdCell && orderIdCell.textContent.includes(orderId.slice(0, 8))) {
+                // Extract order details from the row
+                const cells = row.querySelectorAll('td');
+                const customerName = cells[1].querySelector('.text-sm.font-medium').textContent;
+                const customerEmail = cells[1].querySelector('.text-sm.text-gray-500').textContent;
+                const itemsText = cells[2].textContent;
+                const total = cells[3].textContent;
+                const status = cells[4].querySelector('select').value;
+                const pickupTime = cells[5].textContent;
+
+                // Create detailed view modal
+                const modal = document.createElement('div');
+                modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in';
+                modal.innerHTML = `
+                    <div class="glass-card p-8 max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+                        <div class="flex justify-between items-start mb-6">
+                            <div>
+                                <h2 class="text-2xl font-bold">Order Details</h2>
+                                <p class="text-gray-600">Order #${orderId.slice(0, 8)}</p>
+                            </div>
+                            <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600 p-2">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <h3 class="font-semibold text-gray-800 mb-3">Customer Information</h3>
+                                <div class="space-y-2">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Name:</span>
+                                        <span class="font-medium">${customerName}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Email:</span>
+                                        <span class="font-medium">${customerEmail}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <h3 class="font-semibold text-gray-800 mb-3">Order Information</h3>
+                                <div class="space-y-2">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Status:</span>
+                                        <span class="status-badge status-${status.toLowerCase()}">${status}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Total:</span>
+                                        <span class="font-bold text-green-600">${total}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Pickup:</span>
+                                        <span class="font-medium">${pickupTime}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <h3 class="font-semibold text-gray-800 mb-3">Order Items</h3>
+                            <div class="space-y-3">
+                                ${itemsText.split('<br>').map(item => {
+                                    const [name, quantity] = item.split(' x');
+                                    return `
+                                        <div class="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0">
+                                            <span class="font-medium">${name}</span>
+                                            <span class="text-gray-600">Quantity: ${quantity}</span>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+
+                        <div class="flex gap-3 mt-6">
+                            <button onclick="printOrder('${orderId}')" class="btn-secondary flex items-center space-x-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                                </svg>
+                                <span>Print Receipt</span>
+                            </button>
+                            <button onclick="this.closest('.fixed').remove()" class="btn-primary flex-1">Close</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                break;
+            }
+        }
+    }
+
+    function printOrder(orderId) {
+        // Find the order details
+        const adminTable = document.getElementById('admin-orders-table');
+        const rows = adminTable.querySelectorAll('tr');
+
+        for(const row of rows) {
+            const orderIdCell = row.querySelector('td:first-child .text-sm.font-medium');
+            if(orderIdCell && orderIdCell.textContent.includes(orderId.slice(0, 8))) {
+                const cells = row.querySelectorAll('td');
+                const customerName = cells[1].querySelector('.text-sm.font-medium').textContent;
+                const customerEmail = cells[1].querySelector('.text-sm.text-gray-500').textContent;
+                const itemsText = cells[2].textContent;
+                const total = cells[3].textContent;
+                const status = cells[4].querySelector('select').value;
+                const pickupTime = cells[5].textContent;
+                const orderDate = cells[0].querySelector('.text-sm.text-gray-500').textContent;
+
+                // Create printable receipt
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>UniCafe Order Receipt</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; max-width: 400px; margin: 0 auto; padding: 20px; }
+                            .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 20px; }
+                            .logo { font-size: 24px; font-weight: bold; color: #6366f1; margin-bottom: 10px; }
+                            .order-info { margin-bottom: 20px; }
+                            .order-info div { margin-bottom: 5px; }
+                            .items { border: 1px solid #ddd; padding: 10px; margin-bottom: 20px; }
+                            .item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #eee; }
+                            .item:last-child { border-bottom: none; }
+                            .total { font-size: 18px; font-weight: bold; text-align: right; margin-top: 10px; }
+                            .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #666; }
+                            @media print { body { max-width: none; margin: 0; } }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="header">
+                            <div class="logo">☕ UniCafe</div>
+                            <div>AI-Powered Campus Dining</div>
+                        </div>
+
+                        <div class="order-info">
+                            <div><strong>Order ID:</strong> #${orderId.slice(0, 8)}</div>
+                            <div><strong>Date:</strong> ${orderDate}</div>
+                            <div><strong>Customer:</strong> ${customerName}</div>
+                            <div><strong>Email:</strong> ${customerEmail}</div>
+                            <div><strong>Status:</strong> ${status}</div>
+                            <div><strong>Pickup Time:</strong> ${pickupTime}</div>
+                        </div>
+
+                        <div class="items">
+                            <h3>Order Items:</h3>
+                            ${itemsText.split('<br>').map(item => {
+                                const [name, quantity] = item.split(' x');
+                                return `<div class="item"><span>${name}</span><span>x${quantity}</span></div>`;
+                            }).join('')}
+                        </div>
+
+                        <div class="total">Total: ${total}</div>
+
+                        <div class="footer">
+                            <div>Thank you for choosing UniCafe!</div>
+                            <div>Visit us again soon.</div>
+                            <div>Generated on ${new Date().toLocaleString()}</div>
+                        </div>
+                    </body>
+                    </html>
+                `);
+
+                printWindow.document.close();
+                printWindow.print();
+                break;
+            }
+        }
+    }
+
+        }, 3000);
+    }
+
+    function showAdminTab(tabName) {
+        // Hide all admin tab contents
+        document.querySelectorAll('.admin-tab-content').forEach(content => content.classList.add('hidden'));
+
+        // Remove active class from all tabs
+        document.querySelectorAll('.admin-tab').forEach(tab => tab.classList.remove('active'));
+
+        // Show selected tab content
+        document.getElementById(`admin-${tabName}`).classList.remove('hidden');
+
+        // Add active class to selected tab
+        document.getElementById(`tab-${tabName}`).classList.add('active');
+
+        // Load tab-specific data
+        if(tabName === 'orders') loadAdminOrders();
+        if(tabName === 'menu') loadAdminMenu();
+        if(tabName === 'inventory') loadInventory();
+        if(tabName === 'analytics') loadAnalytics();
+        if(tabName === 'feedback') loadFeedback();
+        if(tabName === 'profile') loadProfile();
+    }
+
+    async function loadAdminMenu() {
+        const menuLoading = document.getElementById('menu-loading');
+        const menuGrid = document.getElementById('admin-menu-grid');
+
+        menuLoading.classList.remove('hidden');
+        menuGrid.innerHTML = '';
+
+        try {
+            const res = await apiCall('/api/menu');
+            const items = await res.json();
+
+            menuLoading.classList.add('hidden');
+
+            if(items.length === 0) {
+                menuGrid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">No menu items found</div>';
+                return;
+            }
+
+            menuGrid.innerHTML = items.map(item => `
+                <div class="glass-card p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex-1">
+                            <h3 class="text-xl font-bold text-gray-800 mb-2">${item.name}</h3>
+                            <p class="text-gray-600 text-sm mb-3">${item.description}</p>
+                            <div class="flex items-center space-x-2 mb-3">
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                    ${item.category}
+                                </span>
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${item.is_available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                    ${item.is_available ? 'Available' : 'Out of Stock'}
+                                </span>
+                            </div>
+                            <div class="text-2xl font-bold text-indigo-600">$${item.price.toFixed(2)}</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="editMenuItem('${item.id}')" class="btn-secondary flex-1 flex items-center justify-center space-x-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                            <span>Edit</span>
+                        </button>
+                        <button onclick="deleteMenuItem('${item.id}')" class="btn-secondary flex items-center justify-center space-x-2 text-red-600 hover:text-red-700">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                            <span>Delete</span>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        } catch(error) {
+            console.error('Failed to load admin menu:', error);
+            menuLoading.classList.add('hidden');
+            menuGrid.innerHTML = '<div class="col-span-full text-center py-12 text-red-600">Failed to load menu items</div>';
+        }
+    }
+
+    function showAddMenuItemModal() {
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in';
+        modal.innerHTML = `
+            <div class="glass-card p-8 max-w-md mx-4">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold">Add Menu Item</h2>
+                    <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600 p-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <form onsubmit="handleAddMenuItem(event)" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Item Name</label>
+                        <input type="text" id="menu-name" placeholder="e.g., Classic Latte" class="input-field w-full" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                        <textarea id="menu-description" placeholder="Describe the item..." class="input-field w-full" rows="3" required></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Price</label>
+                        <input type="number" id="menu-price" placeholder="0.00" step="0.01" min="0" class="input-field w-full" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                        <select id="menu-category" class="input-field w-full" required>
+                            <option value="">Select category</option>
+                            <option value="Coffee">Coffee</option>
+                            <option value="Snacks">Snacks</option>
+                            <option value="Wraps">Wraps</option>
+                            <option value="Desserts">Desserts</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-primary w-full flex items-center justify-center space-x-2">
+                        <span>Add Item</span>
+                        <div id="add-menu-spinner" class="hidden loading-spinner"></div>
+                    </button>
+                </form>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    async function handleAddMenuItem(event) {
+        event.preventDefault();
+
+        const name = document.getElementById('menu-name').value;
+        const description = document.getElementById('menu-description').value;
+        const price = parseFloat(document.getElementById('menu-price').value);
+        const category = document.getElementById('menu-category').value;
+
+        const spinner = document.getElementById('add-menu-spinner');
+        spinner.classList.remove('hidden');
+
+        try {
+            const res = await apiCall('/api/admin/menu', {
+                method: 'POST',
+                body: JSON.stringify({name, description, price, category})
+            });
+
+            if(res.ok) {
+                showToast('Menu item added successfully!', 'success');
+                document.querySelector('.fixed').remove();
+                loadAdminMenu();
+            } else {
+                const error = await res.json();
+                showToast(error.detail || 'Failed to add menu item', 'error');
+            }
+        } catch(error) {
+            showToast('Network error. Please try again.', 'error');
+        } finally {
+            spinner.classList.add('hidden');
+        }
+    }
+
+    async function deleteMenuItem(itemId) {
+        if(!confirm('Are you sure you want to delete this menu item?')) return;
+
+        try {
+            const res = await apiCall(`/api/admin/menu/${itemId}`, {
+                method: 'DELETE'
+            });
+
+            if(res.ok) {
+                showToast('Menu item deleted successfully!', 'success');
+                loadAdminMenu();
+            } else {
+                const error = await res.json();
+                showToast(error.detail || 'Failed to delete menu item', 'error');
+            }
+        } catch(error) {
+            showToast('Network error. Please try again.', 'error');
+        }
+    }
+
+    async function loadInventory() {
+        const inventoryLoading = document.getElementById('inventory-loading');
+        const inventoryGrid = document.getElementById('inventory-grid');
+
+        inventoryLoading.classList.remove('hidden');
+        inventoryGrid.innerHTML = '';
+
+        try {
+            const res = await apiCall('/api/admin/inventory');
+            const items = await res.json();
+
+            inventoryLoading.classList.add('hidden');
+
+            if(items.length === 0) {
+                inventoryGrid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">No inventory items found</div>';
+                return;
+            }
+
+            inventoryGrid.innerHTML = items.map(item => `
+                <div class="glass-card p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex-1">
+                            <h3 class="text-xl font-bold text-gray-800 mb-2">${item.name}</h3>
+                            <div class="flex items-center space-x-2 mb-3">
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                    ${item.category}
+                                </span>
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${item.is_available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                    ${i
+    window.loadProfile = loadProfile;
+    window.handleUpdateProfile = handleUpdateProfile;
+    window.cancelOrder = cancelOrder;tem.is_available ? 'In Stock' : 'Out of Stock'}
+                                </span>
+                            </div>
+                            <div class="text-lg font-semibold text-gray-700">Stock: ${item.stock_quantity || 0}</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="number" id="stock-${item.id}" value="${item.stock_quantity || 0}" min="0" class="input-field flex-1" placeholder="Stock quantity">
+                        <button onclick="updateStock('${item.id}')" class="btn-primary flex items-center justify-center space-x-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <span>Update</span>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        } catch(error) {
+            console.error('Failed to load inventory:', error);
+            inventoryLoading.classList.add('hidden');
+            inventoryGrid.innerHTML = '<div class="col-span-full text-center py-12 text-red-600">Failed to load inventory</div>';
+        }
+    }
+
+    async function updateStock(itemId) {
+        const stockInput = document.getElementById(`stock-${itemId}`);
+        const stockQuantity = parseInt(stockInput.value);
+
+        if(stockQuantity < 0) {
+            showToast('Stock quantity cannot be negative', 'error');
+            return;
+        }
+
+        try {
+            const res = await apiCall('/api/admin/inventory', {
+                method: 'PUT',
+                body: JSON.stringify({item_id: itemId, stock_quantity: stockQuantity})
+            });
+
+            if(res.ok) {
+                showToast('Stock updated successfully!', 'success');
+                loadInventory();
+            } else {
+                const error = await res.json();
+                showToast(error.detail || 'Failed to update stock', 'error');
+            }
+        } catch(error) {
+            showToast('Network error. Please try again.', 'error');
+        }
+    }
+
+    async function loadAnalytics() {
+        const analyticsLoading = document.getElementById('analytics-loading');
+        const analyticsContent = document.getElementById('analytics-content');
+
+        analyticsLoading.classList.remove('hidden');
+        analyticsContent.classList.add('hidden');
+
+        try {
+            const res = await apiCall('/api/admin/analytics');
+            const data = await res.json();
+
+            analyticsLoading.classList.add('hidden');
+            analyticsContent.classList.remove('hidden');
+
+            // Update metrics
+            document.getElementById('completion-rate').textContent = `${data.completion_rate.toFixed(1)}%`;
+            document.getElementById('av
+    window.loadProfile = loadProfile;
+    window.handleUpdateProfile = handleUpdateProfile;
+    window.cancelOrder = cancelOrder;g-order-value').textContent = `$${data.avg_order_value.toFixed(2)}`;
+            document.getElementById('peak-hour').textContent = data.peak_hour;
+
+            // Create popular items chart
+            const ctx1 = document.getElementById('popular-items-chart').getContext('2d');
+            new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: data.popular_items.map(item => item.name),
+                    datasets: [{
+                        label: 'Units Sold',
+                        data: data.popular_items.map(item => item.quantity),
+                        backgroundColor: 'rgba(99, 102, 241, 0.6)',
+                        borderColor: 'rgba(99, 102, 241, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Create revenue chart
+            const ctx2 = document.getElementById('revenue-chart').getContext('2d');
+            const dates = Object.keys(data.daily_revenue).sort();
+            const revenues = dates.map(date => data.daily_revenue[date]);
+
+            new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: 'Daily Revenue ($)',
+                        data: revenues,
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderColor: 'rgba(16, 185, 129, 1)',
+                        borderWidth: 2,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+        } catch(error) {
+            console.error('Failed to load analytics:', error);
+            analyticsLoading.classList.add('hidden');
+            analyticsContent.innerHTML = '<div class="text-center py-12 text-red-600">Failed to load analytics</div>';
+        }
+    }
+
+    async function loadFeedback() {
+        const feedbackLoading = document.getElementById('feedback-loading');
+        const feedbackList = document.getElementById('feedback-list');
+
+        feedbackLoading.classList.remove('hidden');
+        feedbackList.innerHTML = '';
+
+        try {
+            const res = await apiCall('/api/admin/feedback');
+            const feedback = await res.json();
+
+            feedbackLoading.classList.add('hidden');
+
+            if(feedback.length === 0) {
+                feedbackList.innerHTML = '<div class="text-center py-12 text-gray-500">No feedback received yet</div>';
+                return;
+            }
+
+            feedbackList.innerHTML = feedback.map(item => `
+                <div class="glass-card p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-800">${item.user_name}</h3>
+                            <p class="text-sm text-gray-600">${new Date(item.created_at).toLocaleDateString()}</p>
+                        </div>
+                        <div class="flex items-center space-x-1">
+                            ${Array.from({length: 5}, (_, i) => `
+                                <svg class="w-5 h-5 ${i < item.rating ? 'text-yellow-400' : 'text-gray-300'}" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                </svg>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ${item.comment ? `<p class="text-gray-700 italic">"${item.comment}"</p>` : '<p class="text-gray-500">No comment provided</p>'}
+                </div>
+            `).join('');
+        } catch(error) {
+            console.error('Failed to load feedback:', error);
+            feedbackLoading.classList.add('hidden');
+            feedbackList.innerHTML = '<div class="text-center py-12 text-red-600">Failed to load feedback</div>';
+        }
+    }
+        const profileLoading = document.getElementById('profile-loading');
+        const profileContent = document.getElementById('profile-content');
+
+        profileLoading.classList.remove('hidden');
+        profileContent.classList.add('hidden');
+
+        try {
+            const res = await apiCall('/api/profile');
+            const profile = await res.json();
+
+            profileLoading.classList.add('hidden');
+            profileContent.classList.remove('hidden');
+
+            document.getElementById('profile-name').value = profile.name || '';
+            document.getElementById('profile-email').value = profile.email || '';
+            document.getElementById('profile-phone').value = profile.phone || '';
+        } catch(error) {
+            console.error('Failed to load profile:', error);
+            profileLoading.classList.add('hidden');
+            profileContent.innerHTML = '<div class="text-center py-12 text-red-600">Failed to load profile</div>';
+        }
+    }
+
+    async function handleUpdateProfile(event) {
+        event.preventDefault();
+
+        const name = document.getElementById('profile-name').value;
+        const phone = document.getElementById('profile-phone').value;
+
+        const spinner = document.getElementById('profile-spinner');
+        spinner.classList.remove('hidden');
+
+        try {
+            const res = await apiCall('/api/profile', {
+                method: 'PUT',
+                body: JSON.stringify({name, phone})
+            });
+
+            if(res.ok) {
+                showToast('Profile updated successfully!', 'success');
+            } else {
+                const error = await res.json();
+                showToast(error.detail || 'Failed to update profile', 'error');
+            }
+        } catch(error) {
+            showToast('Network error. Please try again.', 'error');
+        } finally {
+            spinner.classList.add('hidden');
+        }
+    }
+
+    async function cancelOrder(orderId) {
+        if(!confirm('Are you sure you want to cancel this order? This action cannot be undone.')) return;
+
+        try {
+            const res = await apiCall(`/api/orders/${orderId}/cancel`, {
+                method: 'PUT'
+            });
+
+            if(res.ok) {
+                showToast('Order cancelled successfully!', 'success');
+                loadOrders();
+            } else {
+                const error = await res.json();
+                showToast(error.detail || 'Failed to cancel order', 'error');
+            }
+        } catch(error) {
+            showToast('Network error. Please try again.', 'error');
+        }
+    }
+
+            console.error('Failed to load feedback:', error);
+            feedbackLoading.classList.add('hidden');
+            feedbackList.innerHTML = '<div class="text-center py-12 text-red-600">Failed to load feedback</div>';
+        }
+    }
+
+    // Global function exports for onclick handlers
+    window.showView = showView;
+    window.handleLogin = handleLogin;
+    window.handleRegister = handleRegister;
+    window.logout = logout;
+    window.addToCart = addToCart;
+    window.removeFromCart = removeFromCart;
+    window.placeOrder = placeOrder;
+    window.fetchAIRecommendation = fetchAIRecommendation;
+    window.generateAdminInsights = generateAdminInsights;
+    window.updateOrderStatus = updateOrderStatus;
+    window.loadAdminOrders = loadAdminOrders;
+    window.loadAdminStats = loadAdminStats;
+    window.filterMenu = filterMenu;
+    window.updateCartQuantity = updateCartQuantity;
+    window.viewOrderDetails = viewOrderDetails;
+    window.printOrder = printOrder;
+    window.showAdminTab = showAdminTab;
+    window.showAddMenuItemModal = showAddMenuItemModal;
+    window.loadAdminMenu = loadAdminMenu;
+    window.loadInventory = loadInventory;
+    window.loadAnalytics = loadAnalytics;
+    window.loadProfile = loadProfile;
+    window.handleUpdateProfile = handleUpdateProfile;
+    window.cancelOrder = cancelOrder;
+</script>
 </body>
 </html>
