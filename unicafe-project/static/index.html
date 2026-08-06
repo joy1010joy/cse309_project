@@ -437,8 +437,9 @@
                     </form>
 
                     <div class="mt-6 text-center">
-                        <p class="text-gray-600">Demo Account:</p>
-                        <p class="text-sm text-gray-500 mt-1">admin@unicafe.com / admin123</p>
+                        <p class="text-sm text-gray-500">
+                            Use your registered account to sign in.
+                        </p>
                     </div>
 
                     <div class="mt-8 text-center">
@@ -954,9 +955,10 @@
         // Set up event listeners
         setupEventListeners();
 
-        // Show initial view
+        // Synchronize navigation before showing the initial view
+        updateNav();
+
         if(token) {
-            updateNav();
             showView('menu');
         } else {
             showView('login');
@@ -1007,6 +1009,8 @@
         if(token) {
             authButtons.classList.add('hidden');
             navLinks.classList.remove('hidden');
+            navLinks.style.removeProperty('display');
+
             if(isAdmin) {
                 adminNavLink.classList.remove('hidden');
                 adminNavLinkMobile.classList.remove('hidden');
@@ -1017,6 +1021,7 @@
         } else {
             authButtons.classList.remove('hidden');
             navLinks.classList.add('hidden');
+            navLinks.style.display = 'none';
             adminNavLink.classList.add('hidden');
             adminNavLinkMobile.classList.add('hidden');
         }

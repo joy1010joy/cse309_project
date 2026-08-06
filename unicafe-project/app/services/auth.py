@@ -72,37 +72,42 @@ class AuthService:
     # -- helpers ---------------------------------------------------------
 
     def seed_default_admin(self) -> bool:
-        """Create the bootstrap admin if no admin exists.  Returns True if a
-        new admin was created.  Safe to call repeatedly."""
+        """Create the configured bootstrap admin when its email is absent.
 
-        for existing in self._users.list_all():
-            if existing.get("is_admin"):
-                return False
+        Other existing admin accounts do not prevent creation of the
+        explicitly configured admin. Returns True only when a new account
+        is created.
+        """
 
         email = (self._settings.admin_email or "").strip().lower()
-        admin_password = self._settings.admin_password
+        password = self._settings.admin_password or ""
+        full_name = (
+            self._settings.admin_full_name or "UniCafe Admin"
+        ).strip()
 
-        if not email or not admin_password:
+        if not email or not password:
             return False
 
+        # Never overwrite or automatically promote an existing account.
         if self._users.find_by_email(email):
             return False
 
         now_iso = utcnow().isoformat()
-        admin_uid = self._settings.admin_full_name.replace(" ", "_").lower() or "admin"
-        doc_id = _normalise_doc_id(admin_uid)
+        doc_id = f"admin_{uuid.uuid4().hex[:16]}"
+        admin_uid = f"ADMIN-{uuid.uuid4().hex[:10].upper()}"
 
         admin_data = {
             "id": doc_id,
             "email": email,
             "uid": admin_uid,
-            "full_name": self._settings.admin_full_name,
-            "password_hash": hash_password(admin_password),
+            "full_name": full_name,
+            "password_hash": hash_password(password),
             "is_admin": True,
             "is_active": True,
             "created_at": now_iso,
             "updated_at": now_iso,
         }
+
         self._users.create(doc_id, admin_data)
         return True
 

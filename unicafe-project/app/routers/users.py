@@ -10,6 +10,7 @@ import re
 from app.dependencies import (
     get_admin_user,
     get_current_user,
+    get_order_repository,
     get_user_repository,
     get_user_service,
 )
@@ -88,7 +89,7 @@ def admin_list_users(
     _admin: dict = Depends(get_admin_user),
     service: UserService = Depends(get_user_service),
     users: UserRepository = Depends(get_user_repository),
-    orders: OrderRepository = Depends(lambda: __import__("app.dependencies", fromlist=["get_order_repository"]).get_order_repository()),
+    orders: OrderRepository = Depends(get_order_repository),
 ) -> List[AdminUserSummary]:
     raw = service.list(q)
     if is_active is not None:
@@ -101,7 +102,7 @@ def admin_get_user(
     user_id: str,
     _admin: dict = Depends(get_admin_user),
     users: UserRepository = Depends(get_user_repository),
-    orders: OrderRepository = Depends(lambda: __import__("app.dependencies", fromlist=["get_order_repository"]).get_order_repository()),
+    orders: OrderRepository = Depends(get_order_repository),
 ) -> AdminUserSummary:
     user = users.get(user_id)
     if not user:
@@ -116,7 +117,7 @@ def admin_set_status(
     actor: dict = Depends(get_admin_user),
     service: UserService = Depends(get_user_service),
     users: UserRepository = Depends(get_user_repository),
-    orders: OrderRepository = Depends(lambda: __import__("app.dependencies", fromlist=["get_order_repository"]).get_order_repository()),
+    orders: OrderRepository = Depends(get_order_repository),
 ) -> AdminUserSummary:
     try:
         user = service.set_status(user_id, payload.is_active, actor)
