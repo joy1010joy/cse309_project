@@ -79,14 +79,16 @@ class AuthService:
             if existing.get("is_admin"):
                 return False
 
-        email = self._settings.admin_email.lower()
-        if not email:
+        email = (self._settings.admin_email or "").strip().lower()
+        admin_password = self._settings.admin_password
+
+        if not email or not admin_password:
             return False
+
         if self._users.find_by_email(email):
             return False
 
         now_iso = utcnow().isoformat()
-        admin_password = self._settings.admin_password
         admin_uid = self._settings.admin_full_name.replace(" ", "_").lower() or "admin"
         doc_id = _normalise_doc_id(admin_uid)
 

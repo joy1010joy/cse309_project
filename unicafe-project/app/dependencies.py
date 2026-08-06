@@ -176,7 +176,7 @@ def get_current_user(
 ) -> dict:
     token = _extract_bearer(authorization)
     try:
-        payload = decode_access_token(token, settings)
+        payload = decode_access_token(token)
     except TokenError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

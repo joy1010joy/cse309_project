@@ -18,7 +18,8 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
 from app.db import get_db, reset_db
-from app.dependencies import get_auth_service
+from app.repositories.users import UserRepository
+from app.services.auth import AuthService
 from app.routers import (
     ai as ai_router,
     auth as auth_router,
@@ -49,14 +50,23 @@ async def lifespan(app: FastAPI):  # noqa: ARG001
             "or run via the Firebase emulator.  The /api endpoints will return 503."
         )
     else:
-        auth_service = get_auth_service()
         if settings.admin_email and settings.admin_password:
             try:
-                auth_service.seed_default_admin(
-                    email=settings.admin_email,
-                    password=settings.admin_password,
+                auth_service = AuthService(
+                    users=UserRepository(db),
+                    settings=settings,
                 )
-                logger.info("Default admin account ensured: %s", settings.admin_email)
+                created = auth_service.seed_default_admin()
+
+                if created:
+                    logger.info(
+                        "Default admin account created: %s",
+                        settings.admin_email,
+                    )
+                else:
+                    logger.info(
+                        "Default admin account already exists or was skipped"
+                    )
             except Exception as exc:  # noqa: BLE001
                 logger.error("Failed to seed default admin: %s", exc)
 
@@ -88,9 +98,16 @@ def create_app() -> FastAPI:
 
     # -- API routers ------------------------------------------------------
     app.include_router(auth_router.router)
-    app.include_router(menu_router.router)
-    app.include_router(orders_router.router)
+
+    app.include_router(menu_router.public_router)
+    app.include_router(menu_router.admin_router)
+
+    app.include_router(orders_router.user_router)
+    app.include_router(orders_router.admin_router)
+
     app.include_router(users_router.router)
+    app.include_router(users_router.admin_router)
+
     app.include_router(feedback_router.router)
     app.include_router(notifications_router.router)
     app.include_router(reports_router.router)
