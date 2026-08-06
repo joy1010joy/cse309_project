@@ -1,0 +1,1 @@
+"""Package marker for the UniCafe FastAPI application package."""
