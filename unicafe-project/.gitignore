@@ -3,3 +3,24 @@
 serviceAccountKey.json
 *.key
 *.pem
+# Virtual environments
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS and editor files
+.DS_Store
+.vscode/
+.idea/
+
+# Local secrets
+.env
+serviceAccountKey.json
+*.key
+*.pem
