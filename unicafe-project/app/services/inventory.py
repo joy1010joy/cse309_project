@@ -54,4 +54,5 @@ class InventoryService:
             "id": item.get("id"),
             "name": item.get("name"),
             "stock_quantity": stock,
+            "is_available": stock > 0,
         }

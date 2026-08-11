@@ -42,6 +42,7 @@ class FeedbackService:
             id=feedback_id,
             order_id=payload.order_id,
             user_id=user["id"],
+            user_name=str(user.get("full_name") or ""),
             rating=payload.rating,
             comment=payload.comment,
             created_at=now_iso,

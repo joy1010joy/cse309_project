@@ -4,8 +4,6 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, Field, field_validator
-import re
 
 from app.dependencies import (
     get_admin_user,
@@ -14,7 +12,12 @@ from app.dependencies import (
     get_user_repository,
     get_user_service,
 )
-from app.models.schemas import AdminUserStatusUpdate, AdminUserSummary, ProfileUpdate
+from app.models.schemas import (
+    AdminUserStatusUpdate,
+    AdminUserSummary,
+    ProfileUpdate,
+    UserPublic,
+)
 from app.repositories.orders import OrderRepository
 from app.repositories.users import UserRepository
 from app.services.users import UserService
@@ -49,25 +52,17 @@ def _build_summary(user: Dict[str, Any], orders: OrderRepository) -> AdminUserSu
     )
 
 
-@router.get("/profile")
-def get_profile(current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
-    return {
-        "id": current_user.get("id", ""),
-        "email": current_user.get("email", ""),
-        "full_name": current_user.get("full_name", ""),
-        "university_id": current_user.get("uid") or current_user.get("university_id"),
-        "is_admin": bool(current_user.get("is_admin")),
-        "is_active": bool(current_user.get("is_active", True)),
-        "created_at": current_user.get("created_at"),
-    }
+@router.get("/profile", response_model=UserPublic)
+def get_profile(current_user: dict = Depends(get_current_user)) -> UserPublic:
+    return _to_public(current_user)
 
 
-@router.put("/profile")
+@router.put("/profile", response_model=UserPublic)
 def update_profile(
     payload: ProfileUpdate,
     current_user: dict = Depends(get_current_user),
     users: UserRepository = Depends(get_user_repository),
-) -> Dict[str, Any]:
+) -> UserPublic:
     updates = payload.model_dump(exclude_unset=True)
     new_email = updates.get("email")
     if new_email:
@@ -76,10 +71,31 @@ def update_profile(
             raise HTTPException(status_code=409, detail="email already in use")
     # Map ``university_id`` -> ``uid`` to keep the document schema stable.
     if "university_id" in updates:
-        updates["uid"] = updates.pop("university_id") or None
+        new_uid = updates.pop("university_id") or None
+        if new_uid:
+            existing_uid = users.find_by_uid(new_uid)
+            if existing_uid and existing_uid.get("id") != current_user["id"]:
+                raise HTTPException(
+                    status_code=409,
+                    detail="university ID already in use",
+                )
+        updates["uid"] = new_uid
     updates["updated_at"] = to_iso(utcnow())
     users.update(current_user["id"], updates)
-    return users.get(current_user["id"]) or {}
+    updated = users.get(current_user["id"]) or {}
+    return _to_public(updated)
+
+
+def _to_public(user: Dict[str, Any]) -> UserPublic:
+    return UserPublic(
+        id=str(user.get("id", "")),
+        email=str(user.get("email", "")),
+        full_name=str(user.get("full_name", "")),
+        university_id=user.get("uid") or user.get("university_id"),
+        is_admin=bool(user.get("is_admin")),
+        is_active=bool(user.get("is_active", True)),
+        created_at=str(user.get("created_at", "")),
+    )
 
 
 @admin_router.get("", response_model=List[AdminUserSummary])
