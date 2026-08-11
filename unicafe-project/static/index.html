@@ -275,7 +275,11 @@
         }
 
         .status-pending { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
-        .status-confirmed { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+        .status-confirmed { background: rgba(59, 130, 246, 0.1); color: #2563eb; }
+        .status-preparing { background: rgba(139, 92, 246, 0.1); color: #7c3aed; }
+        .status-ready { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+        .status-completed { background: rgba(55, 65, 81, 0.1); color: var(--gray-700); }
+        .status-cancelled { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
         .status-ready { background: rgba(99, 102, 241, 0.1); color: var(--primary); }
 
         .scrollbar-hide {
@@ -329,10 +333,14 @@
                             <div class="text-xs text-white/80 -mt-1">AI-Powered Campus Dining</div>
                         </div>
                     </div>
-                    <div class="hidden md:flex space-x-8" id="nav-links">
+                    <div class="hidden md:flex space-x-8 items-center" id="nav-links">
                         <a href="#" data-view="menu" class="nav-link text-white/90 hover:text-white font-medium transition-colors">Menu</a>
                         <a href="#" data-view="orders" class="nav-link text-white/90 hover:text-white font-medium transition-colors">My Orders</a>
                         <a href="#" data-view="profile" class="nav-link text-white/90 hover:text-white font-medium transition-colors">Profile</a>
+                        <button type="button" id="notif-bell-btn" onclick="toggleNotificationsPanel()" class="relative text-white/90 hover:text-white" title="Notifications">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                            <span id="notif-badge" class="hidden absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-1.5 min-w-[1.25rem] text-center">0</span>
+                        </button>
                         <a href="#" data-view="admin" id="admin-nav-link" class="hidden nav-link text-white/90 hover:text-white font-medium transition-colors">Admin</a>
                         <a href="#" id="logout-btn" class="text-red-300 hover:text-red-200 font-medium transition-colors flex items-center space-x-1">
                             <span>Logout</span>
@@ -475,8 +483,12 @@
                             <input type="email" id="reg-email" placeholder="your@email.com" class="input-field w-full" required>
                         </div>
                         <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">University ID (optional)</label>
+                            <input type="text" id="reg-university-id" placeholder="e.g. STU-1234" class="input-field w-full">
+                        </div>
+                        <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                            <input type="password" id="reg-password" placeholder="Create a strong password" class="input-field w-full" required minlength="6">
+                            <input type="password" id="reg-password" placeholder="At least 8 characters" class="input-field w-full" required minlength="8">
                         </div>
                         <button type="submit" id="register-btn" class="btn-primary w-full flex items-center justify-center space-x-2">
                             <span id="register-text">Create Account</span>
@@ -486,7 +498,7 @@
 
                     <div class="mt-8 text-center">
                         <p class="text-gray-600">Already have an account?
-                            <a href="#" onclick="showView('register')" class="text-indigo-600 hover:text-indigo-500 font-medium">Sign in</a>
+                            <a href="#" onclick="showView('login')" class="text-indigo-600 hover:text-indigo-500 font-medium">Sign in</a>
                         </p>
                     </div>
                 </div>
@@ -638,7 +650,8 @@
                 <button onclick="showAdminTab('orders')" id="tab-orders" class="admin-tab px-4 py-2 text-sm font-medium">Orders</button>
                 <button onclick="showAdminTab('menu')" id="tab-menu" class="admin-tab px-4 py-2 text-sm font-medium">Menu Management</button>
                 <button onclick="showAdminTab('inventory')" id="tab-inventory" class="admin-tab px-4 py-2 text-sm font-medium">Inventory</button>
-                <button onclick="showAdminTab('analytics')" id="tab-analytics" class="admin-tab px-4 py-2 text-sm font-medium">Analytics</button>
+                <button onclick="showAdminTab('analytics')" id="tab-analytics" class="admin-tab px-4 py-2 text-sm font-medium">Reports</button>
+                <button onclick="showAdminTab('users')" id="tab-users" class="admin-tab px-4 py-2 text-sm font-medium">Users</button>
                 <button onclick="showAdminTab('feedback')" id="tab-feedback" class="admin-tab px-4 py-2 text-sm font-medium">Feedback</button>
             </div>
 
@@ -779,50 +792,75 @@
                 <div id="inventory-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
             </div>
 
-            <!-- Analytics Tab -->
+            <!-- Reports Tab -->
             <div id="admin-analytics" class="admin-tab-content hidden">
                 <div class="mb-6">
-                    <h2 class="text-2xl font-bold">Advanced Analytics</h2>
-                    <p class="text-gray-600">Detailed insights for the last 30 days</p>
+                    <h2 class="text-2xl font-bold">Reports</h2>
+                    <p class="text-gray-600">Daily, monthly, and popular-item reports from live order data</p>
                 </div>
-
+                <div class="glass-card p-6 mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Daily report date</label>
+                        <input type="date" id="report-day" class="input-field w-full">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Monthly report (YYYY-MM)</label>
+                        <input type="month" id="report-month" class="input-field w-full">
+                    </div>
+                    <div class="flex items-end gap-2 flex-wrap">
+                        <button onclick="loadAnalytics()" class="btn-primary">Refresh</button>
+                        <button onclick="exportReport('daily')" class="btn-secondary">CSV Daily</button>
+                        <button onclick="exportReport('monthly')" class="btn-secondary">CSV Monthly</button>
+                        <button onclick="exportReport('popular')" class="btn-secondary">CSV Popular</button>
+                    </div>
+                </div>
                 <div id="analytics-loading" class="text-center py-12">
                     <div class="loading-spinner mx-auto mb-4"></div>
-                    <p class="text-gray-600">Loading analytics...</p>
+                    <p class="text-gray-600">Loading reports...</p>
                 </div>
-
-                <div id="analytics-content" class="space-y-8 hidden">
-                    <!-- Key Metrics -->
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="glass-card p-6 text-center">
-                            <h3 class="text-lg font-semibold mb-2">Completion Rate</h3>
-                            <p id="completion-rate" class="text-3xl font-bold text-green-600">0%</p>
-                        </div>
-                        <div class="glass-card p-6 text-center">
-                            <h3 class="text-lg font-semibold mb-2">Avg Order Value</h3>
-                            <p id="avg-order-value" class="text-3xl font-bold text-blue-600">$0.00</p>
-                        </div>
-                        <div class="glass-card p-6 text-center">
-                            <h3 class="text-lg font-semibold mb-2">Peak Hour</h3>
-                            <p id="peak-hour" class="text-3xl font-bold text-purple-600">12:00</p>
-                        </div>
+                <div id="analytics-content" class="space-y-6 hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="glass-card p-4"><div class="text-sm text-gray-600">Daily orders</div><div id="report-daily-orders" class="text-2xl font-bold">0</div></div>
+                        <div class="glass-card p-4"><div class="text-sm text-gray-600">Daily revenue</div><div id="report-daily-revenue" class="text-2xl font-bold text-green-600">$0.00</div></div>
+                        <div class="glass-card p-4"><div class="text-sm text-gray-600">Completed</div><div id="report-daily-completed" class="text-2xl font-bold">0</div></div>
+                        <div class="glass-card p-4"><div class="text-sm text-gray-600">Cancelled</div><div id="report-daily-cancelled" class="text-2xl font-bold">0</div></div>
                     </div>
-
-                    <!-- Popular Items Chart -->
                     <div class="glass-card p-6">
-                        <h3 class="text-xl font-bold mb-4">Popular Items (Last 30 Days)</h3>
-                        <canvas id="popular-items-chart" width="400" height="200"></canvas>
+                        <h3 class="text-xl font-bold mb-2">Monthly summary</h3>
+                        <p id="report-monthly-summary" class="text-gray-700">No data</p>
                     </div>
-
-                    <!-- Revenue Trend -->
                     <div class="glass-card p-6">
-                        <h3 class="text-xl font-bold mb-4">Daily Revenue Trend</h3>
-                        <canvas id="revenue-chart" width="400" height="200"></canvas>
+                        <h3 class="text-xl font-bold mb-4">Popular items</h3>
+                        <div id="report-popular-list" class="space-y-2"></div>
                     </div>
                 </div>
             </div>
 
             <!-- Feedback Tab -->
+            
+            <div id="admin-users" class="admin-tab-content hidden">
+                <div class="glass-card p-6">
+                    <h2 class="text-2xl font-bold mb-4">User Management</h2>
+                    <div id="users-loading" class="text-center py-8 hidden"><div class="loading-spinner mx-auto mb-2"></div><p class="text-gray-600">Loading users...</p></div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">University ID</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Orders</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Spent</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-users-table" class="bg-white divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <div id="admin-feedback" class="admin-tab-content hidden">
                 <div class="mb-6">
                     <h2 class="text-2xl font-bold">Customer Feedback</h2>
@@ -875,24 +913,10 @@
                                 </div>
                             </div>
 
-                            <div class="pt-6 border-t border-gray-200">
-                                <h3 class="text-lg font-semibold mb-4">Change Password</h3>
-                                <div class="space-y-4">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
-                                        <input type="password" id="current-password" class="input-field w-full" placeholder="Enter current password">
-                                    </div>
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-2">New Password</label>
-                                            <input type="password" id="new-password" class="input-field w-full" placeholder="Enter new password">
-                                        </div>
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
-                                            <input type="password" id="confirm-password" class="input-field w-full" placeholder="Confirm new password">
-                                        </div>
-                                    </div>
-                                </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">University ID (optional)</label>
+                                <input type="text" id="profile-university-id" class="input-field w-full" placeholder="e.g. STU-1234">
+                                <p class="text-xs text-gray-500 mt-1">Password changes are not supported in this release.</p>
                             </div>
 
                             <div id="profile-error" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg"></div>
@@ -906,6 +930,20 @@
                 </div>
             </div>
         </div>
+
+        <!-- Notifications panel -->
+        <div id="notifications-panel" class="hidden fixed top-20 right-4 z-50 w-96 max-w-[95vw]">
+            <div class="glass-card p-4 shadow-xl">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-bold text-gray-800">Notifications</h3>
+                    <button onclick="markAllNotificationsRead()" class="text-sm text-indigo-600 hover:text-indigo-800">Mark all read</button>
+                </div>
+                <div id="notifications-list" class="max-h-80 overflow-y-auto space-y-2 text-left">
+                    <p class="text-sm text-gray-500">No notifications yet.</p>
+                </div>
+            </div>
+        </div>
+
     </main>
 </div>
 
@@ -929,6 +967,32 @@
         (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
         window.location.port !== '8000'
     ) ? 'http://127.0.0.1:8000' : '';
+
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    const ORDER_TRANSITIONS = {
+        pending: ['confirmed', 'cancelled'],
+        confirmed: ['preparing', 'cancelled'],
+        preparing: ['ready'],
+        ready: ['completed'],
+        completed: [],
+        cancelled: []
+    };
+
+    function statusOptionsHtml(current) {
+        const next = ORDER_TRANSITIONS[current] || [];
+        const options = [`<option value="${current}" selected>${current}</option>`]
+            .concat(next.map(s => `<option value="${s}">${s}</option>`));
+        return options.join('');
+    }
 
     function buildApiUrl(endpoint) {
         if(/^https?:\/\//.test(endpoint)) return endpoint;
@@ -1038,6 +1102,9 @@
                 logout();
                 throw new Error('Session expired');
             }
+            if(res.status === 403) {
+                // Do not auto-logout; surface permission/disabled errors to caller.
+            }
 
             return res;
         } catch(error) {
@@ -1063,10 +1130,12 @@
             renderCart();
         }
         if(view === 'orders') loadOrders();
+        if(view === 'profile') loadProfile();
         if(view === 'admin' && isAdmin) {
             loadAdminOrders();
             loadAdminStats();
         }
+        if(token) refreshNotificationBadge();
 
         // Update URL hash for bookmarking
         window.location.hash = view;
@@ -1107,6 +1176,7 @@
 
                 updateNav();
                 showView('menu');
+                refreshNotificationBadge();
 
                 // Clear form
                 document.getElementById('login-email').value = '';
@@ -1131,14 +1201,15 @@
         const full_name = document.getElementById('reg-name').value;
         const email = document.getElementById('reg-email').value;
         const password = document.getElementById('reg-password').value;
+        const university_id = (document.getElementById('reg-university-id') || {}).value || '';
 
         if(!full_name || !email || !password) {
             showError('register-error', 'Please fill in all fields');
             return;
         }
 
-        if(password.length < 6) {
-            showError('register-error', 'Password must be at least 6 characters');
+        if(password.length < 8) {
+            showError('register-error', 'Password must be at least 8 characters');
             return;
         }
 
@@ -1154,7 +1225,7 @@
         try {
             const res = await apiCall('/api/auth/register', {
                 method: 'POST',
-                body: JSON.stringify({full_name, email, password})
+                body: JSON.stringify({full_name, email, password, university_id: university_id.trim() || null})
             });
 
             if(res.ok) {
@@ -1464,7 +1535,8 @@
         ordersList.classList.add('hidden');
 
         try {
-            const res = await apiCall('/api/orders');
+            const res = await apiCall('/api/orders/history');
+            if(!res.ok) throw new Error('Failed to load orders');
             const orders = await res.json();
 
             ordersLoading.classList.add('hidden');
@@ -1512,11 +1584,17 @@
                                     <div class="font-medium">${new Date(order.pickup_time).toLocaleString()}</div>
                                 </div>
                             ` : ''}
-                            ${order.status === 'pending' ? `
+                            ${['pending','confirmed'].includes(order.status) ? `
                                 <button onclick="cancelOrder('${order.id}')" class="btn-secondary text-sm px-4 py-2 text-red-600 hover:text-red-700">
                                     Cancel Order
                                 </button>
                             ` : ''}
+                            ${order.status === 'completed' && !order.feedback_id ? `
+                                <button onclick="openFeedbackForm('${order.id}')" class="btn-primary text-sm px-4 py-2">
+                                    Leave Feedback
+                                </button>
+                            ` : ''}
+                            ${order.feedback_id ? `<span class="text-sm text-green-600 font-medium">Feedback submitted</span>` : ''}
                         </div>
                     </div>
                 </div>
@@ -1564,11 +1642,8 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <select onchange="updateOrderStatus('${order.id}', this.value)"
-                                class="status-select px-3 py-1 text-xs font-medium rounded-full border-0 ${order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : order.status === 'confirmed' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}">
-                            <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>Pending</option>
-                            <option value="confirmed" ${order.status === 'confirmed' ? 'selected' : ''}>Confirmed</option>
-                            <option value="ready" ${order.status === 'ready' ? 'selected' : ''}>Ready</option>
-                            <option value="completed" ${order.status === 'completed' ? 'selected' : ''}>Completed</option>
+                                class="status-select px-3 py-1 text-xs font-medium rounded-full border-0 bg-gray-100 text-gray-800">
+                            ${statusOptionsHtml(order.status)}
                         </select>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -1591,30 +1666,37 @@
 
     async function updateOrderStatus(orderId, status) {
         try {
-            await apiCall(`/api/admin/orders/${orderId}/status`, {
+            const res = await apiCall(`/api/admin/orders/${orderId}/status`, {
                 method: 'PUT',
                 body: JSON.stringify({status})
             });
-
-            // Update local stats
+            if(!res.ok) {
+                const error = await res.json().catch(() => ({}));
+                const detail = error.detail || 'Failed to update order status';
+                showToast(typeof detail === 'string' ? detail : JSON.stringify(detail), 'error');
+                loadAdminOrders();
+                return;
+            }
+            loadAdminOrders();
             loadAdminStats();
-
             showToast(`Order status updated to ${status}`, 'success');
         } catch(error) {
             console.error('Failed to update order status:', error);
             showToast('Failed to update order status', 'error');
+            loadAdminOrders();
         }
     }
 
     async function loadAdminStats() {
         try {
-            const res = await apiCall('/api/admin/stats');
+            const res = await apiCall('/api/admin/dashboard');
             const stats = await res.json();
 
             document.getElementById('admin-total-orders').textContent = stats.total_orders || 0;
             document.getElementById('admin-revenue').textContent = `$${(stats.total_revenue || 0).toFixed(2)}`;
-            document.getElementById('admin-pending').textContent = stats.pending_orders || 0;
-            document.getElementById('admin-completed').textContent = stats.completed_orders || 0;
+            const byStatus = stats.orders_by_status || {};
+            document.getElementById('admin-pending').textContent = byStatus.pending || 0;
+            document.getElementById('admin-completed').textContent = byStatus.completed || 0;
         } catch(error) {
             console.error('Failed to load admin stats:', error);
         }
@@ -1622,7 +1704,7 @@
 
     async function fetchAIRecommendation() {
         try {
-            const res = await apiCall('/api/ai/recommend');
+            const res = await apiCall('/api/ai/recommendations');
             const data = await res.json();
 
             showToast('AI Recommendations Generated!', 'success');
@@ -1641,8 +1723,15 @@
                             <p class="text-gray-600 text-sm">Personalized suggestions for you</p>
                         </div>
                     </div>
-                    <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 mb-6">
-                        <p class="text-gray-700">${data.recommendations || 'Based on your preferences, we recommend trying our most popular items!'}</p>
+                    <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 mb-6 space-y-3">
+                        ${(Array.isArray(data.recommendations) ? data.recommendations : []).map(item => `
+                            <div class="bg-white/70 rounded-lg p-3">
+                                <div class="font-semibold text-gray-800">${escapeHtml(item.name)}</div>
+                                <div class="text-sm text-gray-600">${escapeHtml(item.reason || '')}</div>
+                                <div class="text-sm text-indigo-700 mt-1">$${Number(item.price || 0).toFixed(2)} · ${escapeHtml(item.category || '')}</div>
+                            </div>
+                        `).join('') || '<p class="text-gray-700">No recommendations available right now.</p>'}
+                        ${data.fallback ? '<p class="text-xs text-gray-500 mt-2">Showing fallback suggestions.</p>' : ''}
                     </div>
                     <button onclick="this.closest('.fixed').remove()" class="btn-primary w-full">Got it!</button>
                 </div>
@@ -1659,25 +1748,7 @@
 
         const fullName = document.getElementById('profile-full-name').value;
         const email = document.getElementById('profile-email-input').value;
-        const currentPassword = document.getElementById('current-password').value;
-        const newPassword = document.getElementById('new-password').value;
-        const confirmPassword = document.getElementById('confirm-password').value;
-
-        // Validate password change
-        if(newPassword || confirmPassword) {
-            if(!currentPassword) {
-                showError('profile-error', 'Current password is required to change password');
-                return;
-            }
-            if(newPassword !== confirmPassword) {
-                showError('profile-error', 'New passwords do not match');
-                return;
-            }
-            if(newPassword.length < 6) {
-                showError('profile-error', 'New password must be at least 6 characters');
-                return;
-            }
-        }
+        const universityId = (document.getElementById('profile-university-id') || {}).value || '';
 
         const profileBtn = document.getElementById('profile-btn');
         const profileText = document.getElementById('profile-text');
@@ -1688,8 +1759,8 @@
         profileSpinner.classList.remove('hidden');
 
         try {
-            // Update profile info
             const profileData = {full_name: fullName, email: email};
+            if(universityId.trim()) profileData.university_id = universityId.trim();
             const profileRes = await apiCall('/api/profile', {
                 method: 'PUT',
                 body: JSON.stringify(profileData)
@@ -1697,23 +1768,12 @@
 
             if(!profileRes.ok) {
                 const error = await profileRes.json();
-                throw new Error(error.detail || 'Failed to update profile');
-            }
-
-            // Update password if provided
-            if(newPassword) {
-                // Note: Password change would need a separate endpoint in a real app
-                // For now, we'll just show a success message
+                const detail = error.detail || 'Failed to update profile';
+                throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
             }
 
             showToast('Profile updated successfully!', 'success');
-            loadProfile(); // Reload profile data
-
-            // Clear password fields
-            document.getElementById('current-password').value = '';
-            document.getElementById('new-password').value = '';
-            document.getElementById('confirm-password').value = '';
-
+            loadProfile();
         } catch(error) {
             showError('profile-error', error.message);
         } finally {
@@ -1762,7 +1822,7 @@
         `;
 
         try {
-            const res = await apiCall('/api/ai/admin-insights');
+            const res = await apiCall('/api/admin/ai/insights');
             const data = await res.json();
 
             aiInsights.innerHTML = `
@@ -1771,7 +1831,7 @@
                         <svg class="w-5 h-5 text-indigo-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
                         </svg>
-                        <div class="text-gray-700 leading-relaxed">${data.insights || 'AI analysis complete. Check your order patterns and customer preferences for optimization opportunities.'}</div>
+                        <div class="text-gray-700 leading-relaxed">${escapeHtml(data.response || 'AI analysis unavailable.')}${data.fallback ? ' <span class=\'text-xs text-gray-500\'>(fallback)</span>' : ''}</div>
                     </div>
                 </div>
             `;
@@ -1807,7 +1867,7 @@
         // Add user message
         messagesDiv.innerHTML += `
             <div class="chat-bubble user mb-3">
-                ${message}
+                ${escapeHtml(message)}
             </div>
         `;
 
@@ -1827,7 +1887,7 @@
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
         try {
-            const res = await apiCall('/api/ai/assistant', {
+            const res = await apiCall('/api/ai/chat', {
                 method: 'POST',
                 body: JSON.stringify({message})
             });
@@ -1844,7 +1904,7 @@
                         <svg class="w-4 h-4 text-indigo-600 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
                         </svg>
-                        <span>${data.response || 'I apologize, but I am unable to assist with that request at the moment.'}</span>
+                        <span>${escapeHtml(data.response || 'I apologize, but I am unable to assist with that request at the moment.')}${data.fallback ? ' <em class="text-xs opacity-70">(fallback)</em>' : ''}</span>
                     </div>
                 </div>
             `;
@@ -2120,6 +2180,7 @@
         if(tabName === 'menu') loadAdminMenu();
         if(tabName === 'inventory') loadInventory();
         if(tabName === 'analytics') loadAnalytics();
+        if(tabName === 'users') loadAdminUsers();
         if(tabName === 'feedback') loadFeedback();
     }
 
@@ -2216,7 +2277,13 @@
                             <option value="Snacks">Snacks</option>
                             <option value="Wraps">Wraps</option>
                             <option value="Desserts">Desserts</option>
+                            <option value="Drinks">Drinks</option>
+                            <option value="Food">Food</option>
                         </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Initial stock</label>
+                        <input type="number" id="menu-stock" value="10" min="0" class="input-field w-full" required>
                     </div>
                     <button type="submit" class="btn-primary w-full flex items-center justify-center space-x-2">
                         <span>Add Item</span>
@@ -2235,6 +2302,7 @@
         const description = document.getElementById('menu-description').value;
         const price = parseFloat(document.getElementById('menu-price').value);
         const category = document.getElementById('menu-category').value;
+        const stock_quantity = parseInt((document.getElementById('menu-stock') || {value:10}).value, 10);
 
         const spinner = document.getElementById('add-menu-spinner');
         spinner.classList.remove('hidden');
@@ -2242,7 +2310,7 @@
         try {
             const res = await apiCall('/api/admin/menu', {
                 method: 'POST',
-                body: JSON.stringify({name, description, price, category})
+                body: JSON.stringify({name, description, price, category, stock_quantity, is_available: stock_quantity > 0})
             });
 
             if(res.ok) {
@@ -2342,9 +2410,9 @@
         }
 
         try {
-            const res = await apiCall('/api/admin/inventory', {
+            const res = await apiCall(`/api/admin/inventory/${itemId}`, {
                 method: 'PUT',
-                body: JSON.stringify({item_id: itemId, stock_quantity: stockQuantity})
+                body: JSON.stringify({stock_quantity: stockQuantity})
             });
 
             if(res.ok) {
@@ -2362,78 +2430,65 @@
     async function loadAnalytics() {
         const analyticsLoading = document.getElementById('analytics-loading');
         const analyticsContent = document.getElementById('analytics-content');
-
         analyticsLoading.classList.remove('hidden');
         analyticsContent.classList.add('hidden');
-
         try {
-            const res = await apiCall('/api/admin/analytics');
-            const data = await res.json();
-
+            const day = document.getElementById('report-day').value;
+            const month = document.getElementById('report-month').value;
+            const dailyUrl = day ? `/api/admin/reports/daily?day=${encodeURIComponent(day)}` : '/api/admin/reports/daily';
+            const monthlyUrl = month ? `/api/admin/reports/monthly?year_month=${encodeURIComponent(month)}` : '/api/admin/reports/monthly';
+            const [dailyRes, monthlyRes, popularRes] = await Promise.all([
+                apiCall(dailyUrl),
+                apiCall(monthlyUrl),
+                apiCall('/api/admin/reports/popular-items?limit=10')
+            ]);
+            if(!dailyRes.ok || !monthlyRes.ok || !popularRes.ok) throw new Error('Failed to load reports');
+            const daily = await dailyRes.json();
+            const monthly = await monthlyRes.json();
+            const popular = await popularRes.json();
+            document.getElementById('report-daily-orders').textContent = daily.total_orders || 0;
+            document.getElementById('report-daily-revenue').textContent = `$${(daily.total_revenue || 0).toFixed(2)}`;
+            document.getElementById('report-daily-completed').textContent = daily.completed_orders || 0;
+            document.getElementById('report-daily-cancelled').textContent = daily.cancelled_orders || 0;
+            document.getElementById('report-monthly-summary').textContent =
+                `${monthly.month}: ${monthly.total_orders} orders, $${(monthly.total_sales || 0).toFixed(2)} sales, best day ${monthly.best_day || 'n/a'}`;
+            const list = document.getElementById('report-popular-list');
+            if(!popular.length) {
+                list.innerHTML = '<p class="text-gray-500">No popular items yet.</p>';
+            } else {
+                list.innerHTML = popular.map(item => `
+                    <div class="flex justify-between border-b border-gray-100 py-2">
+                        <div><span class="font-medium">${escapeHtml(item.name)}</span> <span class="text-xs text-gray-500">${escapeHtml(item.category || '')}</span></div>
+                        <div class="text-sm">qty ${item.total_quantity} · $${Number(item.revenue || 0).toFixed(2)}</div>
+                    </div>`).join('');
+            }
             analyticsLoading.classList.add('hidden');
             analyticsContent.classList.remove('hidden');
-
-            // Update metrics
-            document.getElementById('completion-rate').textContent = `${data.completion_rate.toFixed(1)}%`;
-                document.getElementById('avg-order-value').textContent = `$${data.avg_order_value.toFixed(2)}`;
-            document.getElementById('peak-hour').textContent = data.peak_hour;
-
-            // Create popular items chart
-            const ctx1 = document.getElementById('popular-items-chart').getContext('2d');
-            new Chart(ctx1, {
-                type: 'bar',
-                data: {
-                    labels: data.popular_items.map(item => item.name),
-                    datasets: [{
-                        label: 'Units Sold',
-                        data: data.popular_items.map(item => item.quantity),
-                        backgroundColor: 'rgba(99, 102, 241, 0.6)',
-                        borderColor: 'rgba(99, 102, 241, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
-
-            // Create revenue chart
-            const ctx2 = document.getElementById('revenue-chart').getContext('2d');
-            const dates = Object.keys(data.daily_revenue).sort();
-            const revenues = dates.map(date => data.daily_revenue[date]);
-
-            new Chart(ctx2, {
-                type: 'line',
-                data: {
-                    labels: dates,
-                    datasets: [{
-                        label: 'Daily Revenue ($)',
-                        data: revenues,
-                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                        borderColor: 'rgba(16, 185, 129, 1)',
-                        borderWidth: 2,
-                        fill: true
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
-
         } catch(error) {
-            console.error('Failed to load analytics:', error);
+            console.error('Failed to load reports:', error);
             analyticsLoading.classList.add('hidden');
-            analyticsContent.innerHTML = '<div class="text-center py-12 text-red-600">Failed to load analytics</div>';
+            analyticsContent.classList.remove('hidden');
+            document.getElementById('report-popular-list').innerHTML = '<div class="text-red-600">Failed to load reports</div>';
+        }
+    }
+
+    async function exportReport(kind) {
+        try {
+            const day = document.getElementById('report-day').value;
+            const month = document.getElementById('report-month').value;
+            let url = `/api/admin/reports/export?report=${encodeURIComponent(kind)}`;
+            if(kind === 'daily' && day) url += `&day=${encodeURIComponent(day)}`;
+            if(kind === 'monthly' && month) url += `&year_month=${encodeURIComponent(month)}`;
+            const res = await apiCall(url);
+            if(!res.ok) throw new Error('Export failed');
+            const blob = await res.blob();
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `${kind}-report.csv`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        } catch(error) {
+            showToast('Failed to export CSV', 'error');
         }
     }
 
@@ -2445,7 +2500,7 @@
         feedbackList.innerHTML = '';
 
         try {
-            const res = await apiCall('/api/admin/feedback');
+            const res = await apiCall('/api/feedback');
             const feedback = await res.json();
 
             feedbackLoading.classList.add('hidden');
@@ -2501,6 +2556,8 @@
 
             if(fullNameInput) fullNameInput.value = profile.full_name || profile.name || '';
             if(profileEmailInput) profileEmailInput.value = profile.email || '';
+            const uidInput = document.getElementById('profile-university-id');
+            if(uidInput) uidInput.value = profile.university_id || '';
             if(profileNameDisplay) profileNameDisplay.textContent = profile.full_name || profile.name || 'User';
             if(profileEmailDisplay) profileEmailDisplay.textContent = profile.email || '';
         } catch(error) {
@@ -2509,6 +2566,170 @@
             profileContent.innerHTML = '<div class="text-center py-12 text-red-600">Failed to load profile</div>';
         }
     }
+
+
+    async function refreshNotificationBadge() {
+        if(!token) return;
+        try {
+            const res = await apiCall('/api/notifications/unread-count');
+            if(!res.ok) return;
+            const data = await res.json();
+            const badge = document.getElementById('notif-badge');
+            if(!badge) return;
+            const count = data.unread || 0;
+            if(count > 0) {
+                badge.textContent = String(count);
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        } catch(error) {
+            console.error('Failed to load unread count', error);
+        }
+    }
+
+    async function toggleNotificationsPanel() {
+        const panel = document.getElementById('notifications-panel');
+        panel.classList.toggle('hidden');
+        if(!panel.classList.contains('hidden')) {
+            await loadNotifications();
+        }
+    }
+
+    async function loadNotifications() {
+        const list = document.getElementById('notifications-list');
+        list.innerHTML = '<p class="text-sm text-gray-500">Loading...</p>';
+        try {
+            const res = await apiCall('/api/notifications');
+            if(!res.ok) throw new Error('failed');
+            const notes = await res.json();
+            if(!notes.length) {
+                list.innerHTML = '<p class="text-sm text-gray-500">No notifications yet.</p>';
+                return;
+            }
+            list.innerHTML = notes.map(n => `
+                <div class="border border-gray-100 rounded-lg p-3 ${n.is_read ? 'bg-white' : 'bg-indigo-50'}">
+                    <div class="flex justify-between gap-2">
+                        <div>
+                            <div class="font-medium text-sm text-gray-800">${escapeHtml(n.title)}</div>
+                            <div class="text-xs text-gray-600 mt-1">${escapeHtml(n.message)}</div>
+                            <div class="text-xs text-gray-400 mt-1">${escapeHtml(n.type)} · ${new Date(n.created_at).toLocaleString()}</div>
+                        </div>
+                        ${!n.is_read ? `<button onclick="markNotificationRead('${n.id}')" class="text-xs text-indigo-600">Mark read</button>` : ''}
+                    </div>
+                </div>
+            `).join('');
+            refreshNotificationBadge();
+        } catch(error) {
+            list.innerHTML = '<p class="text-sm text-red-600">Failed to load notifications.</p>';
+        }
+    }
+
+    async function markNotificationRead(id) {
+        const res = await apiCall(`/api/notifications/${id}/read`, {method: 'PUT'});
+        if(res.ok) loadNotifications();
+    }
+
+    async function markAllNotificationsRead() {
+        const res = await apiCall('/api/notifications/read-all', {method: 'PUT'});
+        if(res.ok) {
+            showToast('All notifications marked read', 'success');
+            loadNotifications();
+        }
+    }
+
+    function openFeedbackForm(orderId) {
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        modal.innerHTML = `
+            <div class="glass-card p-6 max-w-md mx-4 w-full">
+                <h3 class="text-xl font-bold mb-4">Leave Feedback</h3>
+                <label class="block text-sm mb-1">Rating (1-5)</label>
+                <input id="fb-rating" type="number" min="1" max="5" value="5" class="input-field w-full mb-3">
+                <label class="block text-sm mb-1">Comment (optional)</label>
+                <textarea id="fb-comment" class="input-field w-full mb-4" rows="3"></textarea>
+                <div class="flex gap-2">
+                    <button class="btn-secondary flex-1" onclick="this.closest('.fixed').remove()">Cancel</button>
+                    <button class="btn-primary flex-1" onclick="submitFeedback('${orderId}', this)">Submit</button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+    }
+
+    async function submitFeedback(orderId, btn) {
+        const rating = parseInt(document.getElementById('fb-rating').value, 10);
+        const comment = document.getElementById('fb-comment').value.trim();
+        btn.disabled = true;
+        try {
+            const res = await apiCall('/api/feedback', {
+                method: 'POST',
+                body: JSON.stringify({order_id: orderId, rating, comment: comment || null})
+            });
+            if(!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.detail || 'Failed to submit feedback');
+            }
+            showToast('Thanks for your feedback!', 'success');
+            btn.closest('.fixed').remove();
+            loadOrders();
+        } catch(error) {
+            showToast(error.message || 'Feedback failed', 'error');
+            btn.disabled = false;
+        }
+    }
+
+    async function loadAdminUsers() {
+        const table = document.getElementById('admin-users-table');
+        const loading = document.getElementById('users-loading');
+        loading.classList.remove('hidden');
+        table.innerHTML = '';
+        try {
+            const meRes = await apiCall('/api/auth/me');
+            const me = meRes.ok ? await meRes.json() : {};
+            const res = await apiCall('/api/admin/users');
+            if(!res.ok) throw new Error('failed');
+            const users = await res.json();
+            loading.classList.add('hidden');
+            if(!users.length) {
+                table.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-500">No users found</td></tr>';
+                return;
+            }
+            table.innerHTML = users.map(u => `
+                <tr>
+                    <td class="px-4 py-3 text-sm">${escapeHtml(u.full_name)} ${u.is_admin ? '<span class="text-xs text-indigo-600">(admin)</span>' : ''}</td>
+                    <td class="px-4 py-3 text-sm">${escapeHtml(u.email)}</td>
+                    <td class="px-4 py-3 text-sm">${escapeHtml(u.university_id || '-')}</td>
+                    <td class="px-4 py-3 text-sm">${u.order_count || 0}</td>
+                    <td class="px-4 py-3 text-sm">$${Number(u.total_spent || 0).toFixed(2)}</td>
+                    <td class="px-4 py-3 text-sm">${u.is_active ? 'Active' : 'Disabled'}</td>
+                    <td class="px-4 py-3 text-sm">
+                        ${u.id === me.id ? '<span class="text-xs text-gray-400">You</span>' : `
+                            <button class="text-indigo-600 hover:text-indigo-800" onclick="setUserStatus('${u.id}', ${u.is_active ? 'false' : 'true'})">
+                                ${u.is_active ? 'Disable' : 'Enable'}
+                            </button>`}
+                    </td>
+                </tr>
+            `).join('');
+        } catch(error) {
+            loading.classList.add('hidden');
+            table.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-red-600">Failed to load users</td></tr>';
+        }
+    }
+
+    async function setUserStatus(userId, isActive) {
+        const res = await apiCall(`/api/admin/users/${userId}/status`, {
+            method: 'PUT',
+            body: JSON.stringify({is_active: !!isActive})
+        });
+        if(!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            showToast(err.detail || 'Failed to update user', 'error');
+            return;
+        }
+        showToast('User status updated', 'success');
+        loadAdminUsers();
+    }
+
 
     // Global function exports for onclick handlers
     window.showView = showView;
@@ -2532,9 +2753,17 @@
     window.loadAdminMenu = loadAdminMenu;
     window.loadInventory = loadInventory;
     window.loadAnalytics = loadAnalytics;
+    window.exportReport = exportReport;
     window.loadProfile = loadProfile;
     window.handleUpdateProfile = handleUpdateProfile;
     window.cancelOrder = cancelOrder;
+    window.toggleNotificationsPanel = toggleNotificationsPanel;
+    window.markNotificationRead = markNotificationRead;
+    window.markAllNotificationsRead = markAllNotificationsRead;
+    window.openFeedbackForm = openFeedbackForm;
+    window.submitFeedback = submitFeedback;
+    window.loadAdminUsers = loadAdminUsers;
+    window.setUserStatus = setUserStatus;
 </script>
 </body>
 </html>
