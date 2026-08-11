@@ -1,49 +1,40 @@
 """AI router — chat, recommendations, admin insights."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 
 from app.dependencies import (
     get_admin_user,
     get_ai_service,
     get_current_user,
-    get_menu_service,
 )
 from app.models.schemas import AIAssistantRequest, AIResponse, AIRecommendationResponse
 from app.services.ai import AIService
-from app.services.menu import MenuService
 
 
 router = APIRouter(prefix="/api", tags=["ai"])
 
 
-def _raise(exc: Exception) -> None:
-    raise HTTPException(status_code=500, detail=str(exc))
-
-
 @router.post("/ai/chat", response_model=AIResponse)
 def chat(
     payload: AIAssistantRequest,
-    _user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user),
     service: AIService = Depends(get_ai_service),
 ) -> AIResponse:
-    return service.chat(user_id=payload.user_id, message=payload.message)
+    return service.chat(prompt=payload.message, viewer=current_user)
 
 
 @router.get("/ai/recommendations", response_model=AIRecommendationResponse)
 def recommendations(
-    user_id: str,
-    _user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user),
     service: AIService = Depends(get_ai_service),
-    menu: MenuService = Depends(get_menu_service),
 ) -> AIRecommendationResponse:
-    items = menu.list_items(available_only=False)
-    return service.recommend(user_id=user_id, menu_items=items)
+    return service.recommend(viewer=current_user)
 
 
-@router.get("/admin/ai/insights")
+@router.get("/admin/ai/insights", response_model=AIResponse)
 def admin_insights(
     _admin: dict = Depends(get_admin_user),
     service: AIService = Depends(get_ai_service),
-) -> dict:
+) -> AIResponse:
     return service.admin_insights()

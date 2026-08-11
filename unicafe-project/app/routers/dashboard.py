@@ -1,4 +1,4 @@
-"""Admin dashboard router — overview stats, peak hours, top items."""
+"""Admin dashboard router — overview KPIs."""
 from __future__ import annotations
 
 from typing import Any, Dict
@@ -17,13 +17,4 @@ def dashboard(
     _admin: dict = Depends(get_admin_user),
     service: DashboardService = Depends(get_dashboard_service),
 ) -> Dict[str, Any]:
-    stats = service.stats()
-    try:
-        stats["peak_hours"] = service.peak_hours()
-    except Exception:
-        stats["peak_hours"] = []
-    try:
-        stats["top_items"] = service.top_items()
-    except Exception:
-        stats["top_items"] = []
-    return stats
+    return service.stats()

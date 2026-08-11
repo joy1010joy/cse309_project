@@ -100,9 +100,10 @@ def get_dashboard_service(
 
 def get_report_service(
     orders: OrderRepository = Depends(get_order_repository),
+    menu: MenuRepository = Depends(get_menu_repository),
     settings: Settings = Depends(get_settings),
 ) -> ReportService:
-    return ReportService(orders=orders, settings=settings)
+    return ReportService(orders=orders, settings=settings, menu=menu)
 
 
 def get_ai_service(

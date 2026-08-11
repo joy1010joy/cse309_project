@@ -3,13 +3,12 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import PlainTextResponse
 
 from app.dependencies import get_admin_user, get_report_service
 from app.models.schemas import DailyReport, MonthlyReport, PopularItem
 from app.services.reports import ReportService
-from app.services.utils import ServiceError
 
 
 router = APIRouter(prefix="/api/admin/reports", tags=["reports"])
@@ -24,7 +23,7 @@ def daily(
     try:
         return service.daily(day)
     except ValueError as exc:
-        raise ServiceError(str(exc), 400) from exc
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.get("/monthly", response_model=MonthlyReport)
@@ -36,7 +35,7 @@ def monthly(
     try:
         return service.monthly(year_month)
     except ValueError as exc:
-        raise ServiceError(str(exc), 400) from exc
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.get("/popular-items")
@@ -58,15 +57,18 @@ def export_csv(
     _admin: dict = Depends(get_admin_user),
     service: ReportService = Depends(get_report_service),
 ) -> PlainTextResponse:
-    if report == "daily":
-        body = service.daily_csv(day)
-        filename = f"daily_{day or 'today'}.csv"
-    elif report == "monthly":
-        body = service.monthly_csv(year_month)
-        filename = f"monthly_{year_month or 'current'}.csv"
-    else:
-        body = service.popular_csv(limit=limit)
-        filename = "popular_items.csv"
+    try:
+        if report == "daily":
+            body = service.daily_csv(day)
+            filename = f"daily_{day or 'today'}.csv"
+        elif report == "monthly":
+            body = service.monthly_csv(year_month)
+            filename = f"monthly_{year_month or 'current'}.csv"
+        else:
+            body = service.popular_csv(limit=limit)
+            filename = "popular_items.csv"
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return PlainTextResponse(
         content=body,
         media_type="text/csv",
