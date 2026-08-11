@@ -1,8 +1,6 @@
 """FastAPI dependencies — DB injection, authentication, role guards."""
 from __future__ import annotations
-
 from typing import Optional
-
 from fastapi import Depends, Header, HTTPException, status
 
 from app.config import Settings, get_settings
@@ -23,6 +21,7 @@ from app.services.notifications import NotificationService
 from app.services.orders import OrderService
 from app.services.reports import ReportService
 from app.services.users import UserService
+from app.services.inventory import InventoryService
 from app.utils.security import TokenError, decode_access_token
 
 

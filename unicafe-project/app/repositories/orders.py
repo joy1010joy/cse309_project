@@ -41,16 +41,24 @@ class OrderRepository:
 
     def list_for_user(self, user_id: str) -> List[Dict[str, Any]]:
         results: List[Dict[str, Any]] = []
+
         for snap in (
             self._db.collection(self.COLLECTION)
             .where("user_id", "==", user_id)
-            .order_by("created_at", "DESC")
             .stream()
         ):
             data = snap.to_dict() or {}
             if not data.get("id"):
                 data["id"] = snap.id
             results.append(data)
+
+        # Sort newest orders first in Python so Firestore does not require
+        # a composite index for user_id + created_at.
+        results.sort(
+            key=lambda order: order.get("created_at") or "",
+            reverse=True,
+        )
+
         return results
 
     def list_all(self) -> List[Dict[str, Any]]:
