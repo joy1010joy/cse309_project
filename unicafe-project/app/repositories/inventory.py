@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import types
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from app.repositories.base import Database
 
@@ -19,6 +19,7 @@ def _txn_get_doc(txn, ref):
         return next(result)
     # Already a snapshot (FakeFirestore)
     return result
+
 
 class InventoryRepository:
     COLLECTION = "menu_items"
@@ -46,6 +47,9 @@ class InventoryRepository:
             results.append(data)
         return results
 
+    def document_ref(self, menu_item_id: str):
+        return self._db.collection(self.COLLECTION).document(menu_item_id)
+
     # -- writes -----------------------------------------------------------
 
     def set_stock(self, menu_item_id: str, stock: int) -> None:
@@ -72,7 +76,7 @@ class InventoryRepository:
             raise StockError("quantity must be positive", 400)
 
         if self._db.supports_transactions:
-            ref = self._db.collection(self.COLLECTION).document(menu_item_id)
+            ref = self.document_ref(menu_item_id)
 
             def _callback(txn):
                 snap = _txn_get_doc(txn, ref)
@@ -91,7 +95,7 @@ class InventoryRepository:
 
         # Fallback: read, validate, write.  Acceptable for the fake backend
         # used in unit tests.
-        ref = self._db.collection(self.COLLECTION).document(menu_item_id)
+        ref = self.document_ref(menu_item_id)
         snap = ref.get()
         data = snap.to_dict() or {}
         self._validate_for_deduction(data, menu_item_id, quantity)
@@ -109,7 +113,7 @@ class InventoryRepository:
             return
 
         if self._db.supports_transactions:
-            ref = self._db.collection(self.COLLECTION).document(menu_item_id)
+            ref = self.document_ref(menu_item_id)
 
             def _callback(txn):
                 snap = _txn_get_doc(txn, ref)
@@ -122,7 +126,7 @@ class InventoryRepository:
             self._db.run_in_transaction(_callback)
             return
 
-        ref = self._db.collection(self.COLLECTION).document(menu_item_id)
+        ref = self.document_ref(menu_item_id)
         snap = ref.get()
         data = snap.to_dict() or {}
         current = int(data.get("stock_quantity", 0))
@@ -130,38 +134,51 @@ class InventoryRepository:
 
     # -- transaction-aware helpers for order atomicity --------------------
 
+    def get_in_txn(self, txn, menu_item_id: str) -> Tuple[Any, Dict[str, Any]]:
+        """Read a menu item inside an externally-managed transaction."""
+        ref = self.document_ref(menu_item_id)
+        snap = _txn_get_doc(txn, ref)
+        data = snap.to_dict() or {}
+        if not data.get("id"):
+            data["id"] = menu_item_id
+        return ref, data
+
+    def write_stock_in_txn(self, txn, ref, stock_quantity: int) -> None:
+        """Write stock inside an externally-managed transaction (after reads)."""
+        stock = max(0, int(stock_quantity))
+        txn.update(
+            ref,
+            {
+                "stock_quantity": stock,
+                "is_available": stock > 0,
+            },
+        )
+
     def deduct_stock_in_txn(self, txn, menu_item_id: str, quantity: int) -> int:
         """Deduct stock within an externally-managed transaction.
 
-        Used by :class:`OrderService` to batch all item deductions and the
-        order document write into one Firestore transaction.
+        Prefer the multi-item all-reads-then-all-writes pattern in
+        :class:`OrderService` for Firestore compliance.  This helper remains
+        for single-item transactional updates.
         """
         if quantity <= 0:
             raise StockError("quantity must be positive", 400)
 
-        ref = self._db.collection(self.COLLECTION).document(menu_item_id)
-        snap = txn.get(ref)
-        data = snap.to_dict() or {}
+        ref, data = self.get_in_txn(txn, menu_item_id)
         self._validate_for_deduction(data, menu_item_id, quantity)
         new_stock = int(data.get("stock_quantity", 0)) - int(quantity)
-        update: Dict[str, Any] = {"stock_quantity": int(new_stock)}
-        if new_stock <= 0:
-            update["is_available"] = False
+        if new_stock < 0:
             new_stock = 0
-            update["stock_quantity"] = new_stock
-        txn.update(ref, update)
+        self.write_stock_in_txn(txn, ref, new_stock)
         return new_stock
 
     def restore_stock_in_txn(self, txn, menu_item_id: str, quantity: int) -> None:
         """Restore stock within an externally-managed transaction."""
         if quantity <= 0:
             return
-        ref = self._db.collection(self.COLLECTION).document(menu_item_id)
-        snap = txn.get(ref)
-        data = snap.to_dict() or {}
+        ref, data = self.get_in_txn(txn, menu_item_id)
         current = int(data.get("stock_quantity", 0))
-        new_stock = current + int(quantity)
-        txn.update(ref, {"stock_quantity": new_stock, "is_available": True})
+        self.write_stock_in_txn(txn, ref, current + int(quantity))
 
     # -- internal --------------------------------------------------------
 

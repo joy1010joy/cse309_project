@@ -1,9 +1,10 @@
 """Order persistence with a small helper for transactional stock checks."""
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from app.repositories.base import Database
+from app.repositories.inventory import _txn_get_doc
 
 
 class OrderRepository:
@@ -11,6 +12,9 @@ class OrderRepository:
 
     def __init__(self, db: Database):
         self._db = db
+
+    def document_ref(self, order_id: str):
+        return self._db.collection(self.COLLECTION).document(order_id)
 
     # -- writes -----------------------------------------------------------
 
@@ -21,11 +25,11 @@ class OrderRepository:
         self._db.collection(self.COLLECTION).document(order_id).update(data)
 
     def set_in_transaction(self, txn, order_id: str, data: Dict[str, Any]) -> None:
-        ref = self._db.collection(self.COLLECTION).document(order_id)
+        ref = self.document_ref(order_id)
         txn.set(ref, data)
 
     def update_in_transaction(self, txn, order_id: str, data: Dict[str, Any]) -> None:
-        ref = self._db.collection(self.COLLECTION).document(order_id)
+        ref = self.document_ref(order_id)
         txn.update(ref, data)
 
     # -- reads ------------------------------------------------------------
@@ -38,6 +42,19 @@ class OrderRepository:
         if not data.get("id"):
             data["id"] = order_id
         return data
+
+    def get_in_txn(self, txn, order_id: str) -> Tuple[Any, Optional[Dict[str, Any]]]:
+        """Read an order document inside an externally-managed transaction."""
+        ref = self.document_ref(order_id)
+        snap = _txn_get_doc(txn, ref)
+        if not getattr(snap, "exists", True):
+            return ref, None
+        data = snap.to_dict() or {}
+        if not data:
+            return ref, None
+        if not data.get("id"):
+            data["id"] = order_id
+        return ref, data
 
     def list_for_user(self, user_id: str) -> List[Dict[str, Any]]:
         results: List[Dict[str, Any]] = []

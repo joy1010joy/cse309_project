@@ -56,13 +56,13 @@ class Query:
         results = list(self.collection._filter(self.ops))
         if self.order_field:
             results.sort(
-                key=lambda doc: doc._data.get(self.order_field),
+                key=lambda doc: (doc.get().to_dict() or {}).get(self.order_field),
                 reverse=self.order_descending,
             )
         if self.limit_count is not None:
             results = results[: self.limit_count]
         for doc in results:
-            yield doc.snapshot()
+            yield doc.get()
 
     def get(self) -> List["DocumentSnapshot"]:
         return list(self.stream())
