@@ -28,7 +28,6 @@ class MenuService:
             raise ServiceError("menu item with this name already exists", 409)
         doc = payload.model_dump()
         doc["id"] = item_id
-        doc.setdefault("available", True)
         self._menu.create(item_id, doc)
         return self._menu.get(item_id)
 

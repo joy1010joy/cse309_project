@@ -23,7 +23,7 @@ def _build_fallback_recommendations(menu_items: List[Dict[str, Any]]) -> List[Di
             "category": item.get("category", ""),
         }
         for item in menu_items[:3]
-        if item.get("available", True)
+        if item.get("is_available", True)
     ]
 
 
@@ -62,7 +62,7 @@ class AIService:
     # -- recommendations --------------------------------------------------
 
     def recommend(self, viewer: Optional[Dict[str, Any]] = None) -> AIRecommendationResponse:
-        items = [item for item in self._menu.list_all() if item.get("available", True)]
+        items = [item for item in self._menu.list_all() if item.get("is_available", True)]
         history = []
         if viewer:
             for order in self._orders.list_for_user(viewer["id"]):
@@ -103,7 +103,7 @@ class AIService:
                     "name": item.get("name"),
                     "category": item.get("category"),
                     "price": item.get("price"),
-                    "available": item.get("available", True),
+                    "available": item.get("is_available", True),
                     "stock": item.get("stock", 0),
                 }
                 for item in items[:50]
