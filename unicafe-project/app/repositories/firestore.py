@@ -100,10 +100,16 @@ class RealFirestoreAdapter:
     def transaction(self) -> RealTransaction:
         return self._client.transaction()
 
-    def run_in_transaction(self, txn, fn: Callable[[RealTransaction], Any]) -> Any:
-        # Newer google-cloud-firestore exposes a ``run`` helper on the client.
-        if hasattr(self._client, "run_in_transaction"):
-            return self._client.run_in_transaction(fn)
-        # Fall back to ``transactional`` decorator pattern.  The repositories
-        # pass an explicit transaction object, so we simply invoke ``fn``.
-        return fn(txn)
+    def run_in_transaction(self, fn: Callable[..., Any]) -> Any:
+        """Run *fn(transaction)* inside a Firestore-managed transaction.
+
+        The google-cloud-firestore SDK uses the ``@transactional`` decorator
+        which wraps the callback and manages begin/commit/retry automatically.
+        """
+
+        @firestore.transactional
+        def _txn_wrapper(txn):
+            return fn(txn)
+
+        return _txn_wrapper(self._client.transaction())
+

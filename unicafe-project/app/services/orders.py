@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from app.config import Settings
 from app.models.schemas import (
@@ -14,7 +14,7 @@ from app.models.schemas import (
     OrderStatusUpdate,
 )
 from app.repositories.base import Database
-from app.repositories.inventory import InventoryRepository
+from app.repositories.inventory import InventoryRepository, StockError
 from app.repositories.menu import MenuRepository
 from app.repositories.orders import OrderRepository
 from app.repositories.users import UserRepository
@@ -126,31 +126,24 @@ class OrderService:
             "feedback_id": None,
         }
 
-        # Atomic stock deduction.  Either every item is decremented and the
-        # order document written, or nothing is changed.
+        # Atomic order creation: deduct all stocks and write the order
+        # document inside one Firestore transaction so there are no partial
+        # deductions or rollback races.
         try:
-            deducted: List[Tuple[str, int]] = []
-            for snap in snapshots:
-                self._inventory.deduct_stock_atomic(
-                    snap["menu_item_id"], int(snap["quantity"])
-                )
-                deducted.append((snap["menu_item_id"], int(snap["quantity"])))
+            def _create_order_txn(txn):
+                for snap in snapshots:
+                    self._inventory.deduct_stock_in_txn(
+                        txn, snap["menu_item_id"], int(snap["quantity"])
+                    )
+                self._orders.set_in_transaction(txn, order_id, order_doc)
+
+            self._db.run_in_transaction(_create_order_txn)
+        except StockError as exc:
+            raise ServiceError(exc.message, exc.status_code) from exc
         except ServiceError:
-            # Roll back anything already deducted.
-            for menu_item_id, qty in deducted:
-                self._inventory.restore_stock(menu_item_id, qty)
             raise
         except Exception as exc:
-            for menu_item_id, qty in deducted:
-                self._inventory.restore_stock(menu_item_id, qty)
             raise ServiceError(f"could not create order: {exc}", 500) from exc
-
-        try:
-            self._orders.create(order_id, order_doc)
-        except Exception:
-            for menu_item_id, qty in deducted:
-                self._inventory.restore_stock(menu_item_id, qty)
-            raise
 
         if self._notifications is not None:
             self._notifications.create_for_user(

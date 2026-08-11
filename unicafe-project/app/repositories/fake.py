@@ -249,6 +249,15 @@ class FakeFirestore:
     def transaction(self) -> Transaction:
         return Transaction(self)
 
+    def run_in_transaction(self, fn):
+        """Run *fn(transaction)* under the global lock.
+
+        The in-memory fake doesn't need real transactional semantics.
+        We just create a :class:`Transaction`, call ``fn``, and return.
+        """
+        txn = Transaction(self)
+        return fn(txn)
+
     # test helpers --------------------------------------------------
 
     def reset(self) -> None:
