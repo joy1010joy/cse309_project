@@ -37,10 +37,12 @@ def test_menu_crud_and_inventory(client, fake_db):
             "category": "Drinks",
             "stock_quantity": 5,
             "is_available": True,
+            "image_url": "https://images.example.edu/latte.jpg",
         },
     )
     assert created.status_code == 201
     item_id = created.json()["id"]
+    assert created.json()["image_url"] == "https://images.example.edu/latte.jpg"
 
     public = client.get("/api/menu")
     assert public.status_code == 200
@@ -53,6 +55,22 @@ def test_menu_crud_and_inventory(client, fake_db):
     )
     assert updated.status_code == 200
     assert updated.json()["price"] == 130
+    assert updated.json()["image_url"] == "https://images.example.edu/latte.jpg"
+
+    bad_image = client.put(
+        f"/api/admin/menu/{item_id}",
+        headers=admin,
+        json={"image_url": "javascript:alert(1)"},
+    )
+    assert bad_image.status_code == 422
+
+    cleared_image = client.put(
+        f"/api/admin/menu/{item_id}",
+        headers=admin,
+        json={"image_url": None},
+    )
+    assert cleared_image.status_code == 200
+    assert cleared_image.json()["image_url"] is None
 
     invalid = client.post(
         "/api/admin/menu",

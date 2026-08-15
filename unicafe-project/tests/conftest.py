@@ -77,6 +77,7 @@ def seed_menu_item(
     stock: int = 10,
     category: str = "Drinks",
     is_available: bool = True,
+    image_url: str | None = None,
 ) -> dict:
     now = to_iso(utcnow())
     data = {
@@ -87,6 +88,7 @@ def seed_menu_item(
         "category": category,
         "stock_quantity": stock,
         "is_available": is_available and stock > 0,
+        "image_url": image_url,
         "created_at": now,
         "updated_at": now,
     }

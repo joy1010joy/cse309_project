@@ -26,6 +26,7 @@ class InventoryService:
                 "id": item.get("id"),
                 "name": item.get("name"),
                 "category": item.get("category"),
+                "image_url": item.get("image_url"),
                 "stock_quantity": _stock_of(item),
                 "is_available": bool(item.get("is_available", True)),
             }
@@ -39,6 +40,8 @@ class InventoryService:
         return {
             "id": item.get("id"),
             "name": item.get("name"),
+            "category": item.get("category"),
+            "image_url": item.get("image_url"),
             "stock_quantity": _stock_of(item),
             "is_available": bool(item.get("is_available", True)),
         }
@@ -53,6 +56,8 @@ class InventoryService:
         return {
             "id": item.get("id"),
             "name": item.get("name"),
+            "category": item.get("category"),
+            "image_url": item.get("image_url"),
             "stock_quantity": stock,
             "is_available": stock > 0,
         }

@@ -165,6 +165,7 @@ class MenuItemCreate(BaseModel):
     category: str = Field(..., min_length=1, max_length=80)
     stock_quantity: int = Field(0, ge=0, le=100000)
     is_available: bool = True
+    image_url: Optional[str] = Field(default=None, max_length=2000)
 
     @field_validator("name", "description", "category")
     @classmethod
@@ -174,6 +175,11 @@ class MenuItemCreate(BaseModel):
             raise ValueError("must not be empty")
         return cleaned
 
+    @field_validator("image_url")
+    @classmethod
+    def _check_image_url(cls, value: Optional[str]) -> Optional[str]:
+        return _normalise_image_url(value)
+
 
 class MenuItemUpdate(BaseModel):
     name: Optional[str] = Field(default=None, max_length=120)
@@ -182,6 +188,7 @@ class MenuItemUpdate(BaseModel):
     category: Optional[str] = Field(default=None, max_length=80)
     stock_quantity: Optional[int] = Field(default=None, ge=0, le=100000)
     is_available: Optional[bool] = None
+    image_url: Optional[str] = Field(default=None, max_length=2000)
 
     @field_validator("name", "description", "category")
     @classmethod
@@ -193,6 +200,11 @@ class MenuItemUpdate(BaseModel):
             raise ValueError("must not be empty")
         return cleaned
 
+    @field_validator("image_url")
+    @classmethod
+    def _check_image_url(cls, value: Optional[str]) -> Optional[str]:
+        return _normalise_image_url(value)
+
 
 class MenuItemResponse(BaseModel):
     id: str
@@ -202,8 +214,22 @@ class MenuItemResponse(BaseModel):
     category: str
     stock_quantity: int = 0
     is_available: bool = True
+    image_url: Optional[str] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
+
+
+def _normalise_image_url(value: Optional[str]) -> Optional[str]:
+    """Accept safe web URLs or project-local static image paths."""
+    if value is None:
+        return None
+    cleaned = value.strip()
+    if not cleaned:
+        return None
+    lowered = cleaned.lower()
+    if lowered.startswith(("https://", "http://", "/static/", "static/")):
+        return cleaned
+    raise ValueError("image URL must use http(s) or a static project path")
 
 
 # ---------------------------------------------------------------------------
@@ -279,6 +305,7 @@ class InventoryRecord(BaseModel):
     price: float
     stock_quantity: int
     is_available: bool
+    image_url: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------

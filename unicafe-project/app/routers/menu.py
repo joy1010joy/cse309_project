@@ -42,6 +42,7 @@ def _to_response(item: dict) -> MenuItemResponse:
         category=str(item.get("category", "")),
         stock_quantity=int(item.get("stock_quantity", 0) or 0),
         is_available=bool(item.get("is_available", True)),
+        image_url=item.get("image_url") or None,
         created_at=item.get("created_at"),
         updated_at=item.get("updated_at"),
     )
