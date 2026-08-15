@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 def _build_fallback_recommendations(menu_items: List[Dict[str, Any]]) -> List[AIRecommendationItem]:
     items: List[AIRecommendationItem] = []
     for item in menu_items:
-        if not item.get("is_available", True):
+        if not item.get("is_available", True) or int(item.get("stock_quantity") or 0) <= 0:
             continue
         items.append(
             AIRecommendationItem(
@@ -58,10 +58,27 @@ class AIService:
     def chat(self, prompt: str, viewer: Optional[Dict[str, Any]] = None) -> AIResponse:
         items = self._menu.list_all()
         context = self._build_context(items, viewer)
+        if viewer:
+            context["recent_orders"] = [
+                {
+                    "status": order.get("status"),
+                    "total_amount": order.get("total_amount"),
+                    "items": [
+                        {
+                            "name": item.get("name"),
+                            "quantity": item.get("quantity"),
+                        }
+                        for item in order.get("items", [])
+                    ],
+                }
+                for order in self._orders.list_for_user(viewer["id"])[:5]
+            ]
         text = self._call_gemini(
             system_prompt=(
-                "You are UniCafe's helpful assistant. Recommend items from the menu, "
-                "explain pickup times, and answer student questions."
+                "You are UniCafe's helpful campus dining assistant in Bangladesh. "
+                "Use only the supplied current menu and user context. Recommend only "
+                "items marked available with positive stock, express prices in "
+                "Bangladeshi Taka (৳), and never invent menu items or availability."
             ),
             user_prompt=prompt,
             context=context,
@@ -80,7 +97,12 @@ class AIService:
     # -- recommendations --------------------------------------------------
 
     def recommend(self, viewer: Optional[Dict[str, Any]] = None) -> AIRecommendationResponse:
-        items = [item for item in self._menu.list_all() if item.get("is_available", True)]
+        items = [
+            item
+            for item in self._menu.list_all()
+            if item.get("is_available", True)
+            and int(item.get("stock_quantity") or 0) > 0
+        ]
         history: List[Dict[str, Any]] = []
         if viewer:
             for order in self._orders.list_for_user(viewer["id"]):
@@ -101,8 +123,10 @@ class AIService:
         context = self._build_context(items, viewer=None, orders=orders)
         text = self._call_gemini(
             system_prompt=(
-                "You are UniCafe's business analyst. Provide concise insights on "
-                "sales, inventory, and customer behaviour based on the data below."
+                "You are UniCafe's business analyst. Use only the supplied real order, "
+                "menu, inventory, and report metrics. Provide concise insights on "
+                "sales, fulfilment, inventory, and customer demand. Express money in "
+                "Bangladeshi Taka (৳) and never invent figures."
             ),
             user_prompt="Summarise today's performance and suggest two actions for the manager.",
             context=context,
@@ -149,13 +173,47 @@ class AIService:
             }
         if orders is not None:
             totals: Dict[str, int] = {}
+            revenue = 0.0
+            item_quantities: Dict[str, int] = {}
             for order in orders:
                 if order.get("status") == "cancelled":
                     continue
                 status = order.get("status", "pending")
                 totals[status] = totals.get(status, 0) + 1
+                revenue += float(order.get("total_amount") or 0)
+                for order_item in order.get("items", []):
+                    name = str(order_item.get("name") or "Unknown item")
+                    item_quantities[name] = item_quantities.get(name, 0) + int(
+                        order_item.get("quantity") or 0
+                    )
             context["orders_summary"] = totals
             context["orders_total"] = len(orders)
+            context["report_metrics"] = {
+                "non_cancelled_revenue_bdt": round(revenue, 2),
+                "average_order_value_bdt": round(
+                    revenue / max(1, sum(totals.values())), 2
+                ),
+                "top_items_by_quantity": sorted(
+                    item_quantities.items(),
+                    key=lambda row: row[1],
+                    reverse=True,
+                )[:5],
+            }
+            context["inventory_summary"] = {
+                "out_of_stock": [
+                    item.get("name")
+                    for item in items
+                    if int(item.get("stock_quantity") or 0) == 0
+                ],
+                "low_stock": [
+                    {
+                        "name": item.get("name"),
+                        "stock_quantity": int(item.get("stock_quantity") or 0),
+                    }
+                    for item in items
+                    if 0 < int(item.get("stock_quantity") or 0) <= 5
+                ],
+            }
         return context
 
     def _call_gemini(self, system_prompt: str, user_prompt: str, context: Dict[str, Any]) -> Optional[str]:
@@ -164,16 +222,21 @@ class AIService:
             logger.debug("Gemini API key missing; using fallback response")
             return None
         try:
-            import google.generativeai as genai  # type: ignore
+            from google import genai  # type: ignore
+            from google.genai import types  # type: ignore
 
-            genai.configure(api_key=api_key)
-            model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+            client = genai.Client(api_key=api_key)
             prompt = (
-                f"{system_prompt}\n\n"
-                f"Context:\n{json.dumps(context, default=str)[:2000]}\n\n"
+                f"Context:\n{json.dumps(context, default=str)[:12000]}\n\n"
                 f"User question: {user_prompt}"
             )
-            response = model.generate_content(prompt)
+            response = client.models.generate_content(
+                model=self._settings.gemini_model,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                ),
+            )
             return getattr(response, "text", None) or None
         except Exception as exc:  # pragma: no cover - depends on remote service
             logger.warning("Gemini request failed: %s", exc)
@@ -188,9 +251,10 @@ class AIService:
         if not api_key:
             return None
         try:
-            import google.generativeai as genai  # type: ignore
+            from google import genai  # type: ignore
+            from google.genai import types  # type: ignore
 
-            genai.configure(api_key=api_key)
+            client = genai.Client(api_key=api_key)
             slim_menu = [
                 {
                     "id": i.get("id"),
@@ -203,34 +267,42 @@ class AIService:
             ]
             prompt = (
                 "You are UniCafe's recommendation engine. From the menu below, return "
-                "3 JSON objects with keys: menu_item_id, name, reason, price, category. "
-                "Use only ids from the provided list.\n\n"
+                "up to 3 JSON objects with keys: menu_item_id and reason. Use only ids "
+                "from the provided list and never recommend zero-stock items.\n\n"
                 f"Menu: {json.dumps(slim_menu, default=str)}\n\n"
                 f"Recent history: {json.dumps(history[:10], default=str)}"
             )
-            model = genai.GenerativeModel(model_name="gemini-1.5-flash")
-            response = model.generate_content(prompt)
+            response = client.models.generate_content(
+                model=self._settings.gemini_model,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                ),
+            )
             text = getattr(response, "text", "") or ""
-            start = text.find("[")
-            end = text.rfind("]")
-            if start == -1 or end == -1:
+            raw = json.loads(text)
+            if not isinstance(raw, list):
                 return None
-            raw = json.loads(text[start : end + 1])
             parsed: List[AIRecommendationItem] = []
-            valid_ids = {str(i.get("id")) for i in items}
+            menu_by_id = {str(i.get("id")): i for i in items}
             for row in raw:
+                if not isinstance(row, dict):
+                    continue
                 item_id = str(row.get("menu_item_id") or "")
-                if item_id not in valid_ids:
+                source = menu_by_id.get(item_id)
+                if not source:
                     continue
                 parsed.append(
                     AIRecommendationItem(
                         menu_item_id=item_id,
-                        name=str(row.get("name") or ""),
+                        name=str(source.get("name") or ""),
                         reason=str(row.get("reason") or ""),
-                        price=float(row.get("price") or 0),
-                        category=str(row.get("category") or ""),
+                        price=float(source.get("price") or 0),
+                        category=str(source.get("category") or ""),
                     )
                 )
+                if len(parsed) >= 3:
+                    break
             return parsed or None
         except Exception as exc:  # pragma: no cover
             logger.warning("Gemini recommender failed: %s", exc)

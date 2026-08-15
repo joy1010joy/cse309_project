@@ -48,6 +48,7 @@ class Settings:
 
     # Gemini --------------------------------------------------------------
     gemini_api_key: str | None
+    gemini_model: str
 
     # Admin bootstrap -----------------------------------------------------
     admin_email: str | None
@@ -81,6 +82,9 @@ class Settings:
         self.firebase_emulator_host = os.getenv("FIRESTORE_EMULATOR_HOST")
 
         self.gemini_api_key = os.getenv("GEMINI_API_KEY") or None
+        self.gemini_model = (
+            os.getenv("GEMINI_MODEL") or "gemini-3.6-flash"
+        ).strip()
 
         self.admin_email = (os.getenv("ADMIN_EMAIL") or "").strip().lower() or None
         self.admin_password = os.getenv("ADMIN_PASSWORD") or None

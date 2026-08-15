@@ -33,13 +33,13 @@ class MenuRepository:
         if not snap.exists:
             return None
         data = snap.to_dict() or {}
-        return self._normalise(data)
+        return self._normalise(data, item_id=snap.id)
 
     def list_all(self, include_unavailable: bool = True) -> List[Dict[str, Any]]:
         results: List[Dict[str, Any]] = []
         for snap in self._db.collection(self.COLLECTION).order_by("category").stream():
             data = snap.to_dict() or {}
-            data = self._normalise(data)
+            data = self._normalise(data, item_id=snap.id)
             if not include_unavailable and not data.get("is_available", True):
                 continue
             results.append(data)
@@ -54,7 +54,7 @@ class MenuRepository:
             .stream()
         ):
             data = snap.to_dict() or {}
-            results.append(self._normalise(data))
+            results.append(self._normalise(data, item_id=snap.id))
         return results
 
     # -- schema normalisation --------------------------------------------
