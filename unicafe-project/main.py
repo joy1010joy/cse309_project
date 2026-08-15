@@ -14,6 +14,7 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
@@ -123,6 +124,11 @@ def create_app() -> FastAPI:
             "status": "ok" if db is not None else "degraded",
             "database": "firestore" if db is not None else "unavailable",
         }
+
+    @app.get("/favicon.ico", include_in_schema=False)
+    def favicon() -> RedirectResponse:
+        """Keep legacy browser favicon requests away from the 404 log."""
+        return RedirectResponse(url="/favicon.svg", status_code=307)
 
     # -- static frontend -------------------------------------------------
     static_dir = Path(__file__).parent / "static"
