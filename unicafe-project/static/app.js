@@ -9,18 +9,15 @@ const STATUS_META = {
   ready: ["success", "Ready"], completed: ["neutral", "Completed"], cancelled: ["danger", "Cancelled"]
 };
 const IMAGE_FALLBACKS = {
-  coffee: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=900&q=82",
-  tea: "https://images.unsplash.com/photo-1594631252845-29fc4cc8cde9?auto=format&fit=crop&w=900&q=82",
-  burger: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=900&q=82",
-  sandwich: "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=900&q=82",
-  pasta: "https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=900&q=82",
-  noodles: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=82",
-  dessert: "https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=900&q=82",
-  bakery: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=900&q=82",
-  juice: "https://images.unsplash.com/photo-1622597467836-f3285f2131b8?auto=format&fit=crop&w=900&q=82",
-  rice: "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=900&q=82",
-  snack: "https://images.unsplash.com/photo-1599490659213-e2b9527bd087?auto=format&fit=crop&w=900&q=82",
-  default: "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=900&q=82"
+  coffee: "/static/images/menu/classic-latte.jpg",
+  tea: "/static/images/menu/matcha-latte.jpg",
+  dessert: "/static/images/menu/blueberry-muffin.jpg",
+  bakery: "/static/images/menu/chocolate-croissant.jpg",
+  snack: "/static/images/menu/chicken-sandwich.jpg",
+  sandwich: "/static/images/menu/chicken-sandwich.jpg",
+  toast: "/static/images/menu/cheese-toast.jpg",
+  wrap: "/static/images/menu/vegan-wrap.jpg",
+  default: "/static/images/menu/vegan-wrap.jpg"
 };
 
 const state = {
@@ -66,18 +63,18 @@ function readCart() {
   } catch { return []; }
 }
 function saveCart() { localStorage.setItem(CART_KEY, JSON.stringify(state.cart)); }
-function menuImage(item) {
-  if (item?.image_url) {
-    if (item.image_url.startsWith("/static/")) return item.image_url.replace("/static/", "/");
-    if (item.image_url.startsWith("static/")) return `/${item.image_url.replace("static/", "")}`;
-    return item.image_url;
-  }
+function fallbackImage(item) {
   const haystack = `${item?.name || ""} ${item?.category || ""}`.toLowerCase();
   const key = Object.keys(IMAGE_FALLBACKS).find(name => name !== "default" && haystack.includes(name));
   return IMAGE_FALLBACKS[key || "default"];
 }
+function menuImage(item) {
+  if (!item?.image_url) return fallbackImage(item);
+  if (item.image_url.startsWith("static/")) return `/${item.image_url}`;
+  return item.image_url;
+}
 function imageHtml(item, className = "", alt = "") {
-  return `<img class="${escapeHtml(className)}" src="${escapeHtml(menuImage(item))}" alt="${escapeHtml(alt || item?.name || "Menu item")}" loading="lazy" data-fallback-image>`;
+  return `<img class="${escapeHtml(className)}" src="${escapeHtml(menuImage(item))}" alt="${escapeHtml(alt || item?.name || "Menu item")}" loading="lazy" data-fallback-image data-fallback-src="${escapeHtml(fallbackImage(item))}">`;
 }
 function statusBadge(status) {
   const [style, label] = STATUS_META[status] || ["neutral", String(status || "unknown")];
@@ -427,7 +424,7 @@ async function loadAdminMenu() {
 }
 function openMenuForm(id = "") {
   const item = state.menu.find(row => String(row.id) === String(id));
-  openModal(`<div class="modal-head"><div><span class="kicker">${item ? "Update catalogue" : "New menu item"}</span><h2>${item ? "Edit item" : "Add menu item"}</h2><p>Use a direct image URL or leave it blank for a category fallback.</p></div><button class="icon-btn" type="button" data-close-modal aria-label="Close"><i data-lucide="x"></i></button></div><form id="menu-item-form" data-item-id="${item ? safeId(item.id) : ""}"><div class="field-row"><label class="field"><span>Name</span><span class="input-wrap"><i data-lucide="utensils"></i><input id="menu-form-name" required maxlength="120" value="${escapeHtml(item?.name || "")}"></span></label><label class="field"><span>Category</span><span class="input-wrap"><i data-lucide="tag"></i><input id="menu-form-category" required maxlength="80" value="${escapeHtml(item?.category || "")}" placeholder="Meals, Coffee…"></span></label></div><label class="field"><span>Description</span><span class="input-wrap"><i data-lucide="align-left"></i><textarea id="menu-form-description" required maxlength="600" placeholder="Short, useful description">${escapeHtml(item?.description || "")}</textarea></span></label><div class="field-row"><label class="field"><span>Price (BDT)</span><span class="input-wrap"><i data-lucide="banknote"></i><input id="menu-form-price" type="number" min="0.01" max="10000" step="0.01" required value="${item ? Number(item.price) : ""}"></span></label><label class="field"><span>Stock</span><span class="input-wrap"><i data-lucide="package"></i><input id="menu-form-stock" type="number" min="0" max="100000" step="1" required value="${item ? Number(item.stock_quantity) : 0}"></span></label></div><label class="field"><span>Image URL <em>optional</em></span><span class="input-wrap"><i data-lucide="image"></i><input id="menu-form-image" type="url" maxlength="2000" value="${escapeHtml(item?.image_url || "")}" placeholder="https://…"></span></label><label style="display:flex;align-items:center;gap:9px;margin-top:4px"><input id="menu-form-available" type="checkbox" ${item ? (item.is_available ? "checked" : "") : "checked"}> Available for ordering</label><div class="modal-actions"><button class="btn btn-soft" type="button" data-close-modal>Cancel</button><button class="btn btn-primary" id="menu-form-submit" type="submit">${item ? "Save changes" : "Create item"}</button></div></form>`, "wide");
+    openModal(`<div class="modal-head"><div><span class="kicker">${item ? "Update catalogue" : "New menu item"}</span><h2>${item ? "Edit item" : "Add menu item"}</h2><p>Use a local /static image path or a direct URL. Leave blank for a category fallback.</p></div><button class="icon-btn" type="button" data-close-modal aria-label="Close"><i data-lucide="x"></i></button></div><form id="menu-item-form" data-item-id="${item ? safeId(item.id) : ""}"><div class="field-row"><label class="field"><span>Name</span><span class="input-wrap"><i data-lucide="utensils"></i><input id="menu-form-name" required maxlength="120" value="${escapeHtml(item?.name || "")}"></span></label><label class="field"><span>Category</span><span class="input-wrap"><i data-lucide="tag"></i><input id="menu-form-category" required maxlength="80" value="${escapeHtml(item?.category || "")}" placeholder="Meals, Coffee…"></span></label></div><label class="field"><span>Description</span><span class="input-wrap"><i data-lucide="align-left"></i><textarea id="menu-form-description" required maxlength="600" placeholder="Short, useful description">${escapeHtml(item?.description || "")}</textarea></span></label><div class="field-row"><label class="field"><span>Price (BDT)</span><span class="input-wrap"><i data-lucide="banknote"></i><input id="menu-form-price" type="number" min="0.01" max="10000" step="0.01" required value="${item ? Number(item.price) : ""}"></span></label><label class="field"><span>Stock</span><span class="input-wrap"><i data-lucide="package"></i><input id="menu-form-stock" type="number" min="0" max="100000" step="1" required value="${item ? Number(item.stock_quantity) : 0}"></span></label></div><label class="field"><span>Image URL <em>optional</em></span><span class="input-wrap"><i data-lucide="image"></i><input id="menu-form-image" type="text" maxlength="2000" value="${escapeHtml(item?.image_url || "")}" placeholder="/static/images/menu/item.jpg"></span></label><label style="display:flex;align-items:center;gap:9px;margin-top:4px"><input id="menu-form-available" type="checkbox" ${item ? (item.is_available ? "checked" : "") : "checked"}> Available for ordering</label><div class="modal-actions"><button class="btn btn-soft" type="button" data-close-modal>Cancel</button><button class="btn btn-primary" id="menu-form-submit" type="submit">${item ? "Save changes" : "Create item"}</button></div></form>`, "wide");
 }
 async function submitMenuForm(event) {
   event.preventDefault(); if (!event.target.checkValidity()) return showToast("warning", "Check the form", "Complete all required values.");
@@ -608,6 +605,11 @@ function bindEvents() {
   });
   document.addEventListener("error", event => {
     if (!(event.target instanceof HTMLImageElement) || !event.target.hasAttribute("data-fallback-image")) return;
+    if (event.target.dataset.fallbackApplied !== "true") {
+      event.target.dataset.fallbackApplied = "true";
+      event.target.src = event.target.dataset.fallbackSrc || IMAGE_FALLBACKS.default;
+      return;
+    }
     const fallback = document.createElement("div"); fallback.className = "image-fallback"; fallback.innerHTML = `<i data-lucide="utensils"></i>`; event.target.replaceWith(fallback); iconRefresh();
   }, true);
   $("#login-form").addEventListener("submit", handleLogin); $("#register-form").addEventListener("submit", handleRegister); $("#profile-form").addEventListener("submit", updateProfile);
