@@ -345,9 +345,12 @@ svg { width: 1.15em; height: 1.15em; stroke-width: 1.9; }
 .chat-messages { flex: 1; padding: 15px; overflow-y: auto; background: #f6f8f6; }
 .chat-bubble { width: fit-content; max-width: 86%; margin-bottom: 10px; padding: 10px 12px; border-radius: 13px; font-size: 13px; white-space: pre-wrap; }
 .chat-bubble.assistant { color: #394842; background: white; border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+.chat-bubble.typing { color: var(--muted); font-style: italic; animation: chat-pulse 1.2s ease-in-out infinite; }
 .chat-bubble.user { margin-left: auto; color: white; background: var(--green-800); border-bottom-right-radius: 4px; }
+.chat-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
 .chat-form { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--line); }
 .chat-form input { padding-left: 13px; }
+@keyframes chat-pulse { 50% { opacity: .58; } }
 .modal-root:empty { display: none; }
 .modal-overlay { position: fixed; inset: 0; z-index: 110; display: grid; place-items: center; padding: 18px; background: rgba(4, 23, 18, .62); backdrop-filter: blur(5px); }
 .modal { width: min(560px, 100%); max-height: calc(100vh - 36px); overflow-y: auto; padding: 27px; background: white; border-radius: 22px; box-shadow: 0 30px 90px rgba(0, 0, 0, .25); }

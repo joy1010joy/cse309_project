@@ -3,6 +3,7 @@
 const TOKEN_KEY = "unicafe_token";
 const ADMIN_KEY = "unicafe_is_admin";
 const CART_KEY = "unicafe_cart";
+const CHAT_SESSION_KEY = "unicafe_chat_session";
 const ORDER_STEPS = ["pending", "confirmed", "preparing", "ready", "completed"];
 const STATUS_META = {
   pending: ["warning", "Pending"], confirmed: ["info", "Confirmed"], preparing: ["violet", "Preparing"],
@@ -30,7 +31,9 @@ const state = {
   menuFilter: "All",
   menuSearch: "",
   users: [],
-  cart: readCart()
+  cart: readCart(),
+  chatActive: false,
+  chatSessionId: readChatSessionId()
 };
 
 function $(selector, root = document) { return root.querySelector(selector); }
@@ -63,6 +66,14 @@ function readCart() {
   } catch { return []; }
 }
 function saveCart() { localStorage.setItem(CART_KEY, JSON.stringify(state.cart)); }
+function readChatSessionId() {
+  let value = sessionStorage.getItem(CHAT_SESSION_KEY);
+  if (!value) {
+    value = globalThis.crypto?.randomUUID?.() || `chat-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    sessionStorage.setItem(CHAT_SESSION_KEY, value);
+  }
+  return value;
+}
 function fallbackImage(item) {
   const haystack = `${item?.name || ""} ${item?.category || ""}`.toLowerCase();
   const key = Object.keys(IMAGE_FALLBACKS).find(name => name !== "default" && haystack.includes(name));
@@ -263,17 +274,20 @@ function renderMenu() {
   }).join("");
   iconRefresh();
 }
-function addToCart(id) {
+function addToCart(id, quantity = 1) {
   const item = state.menu.find(row => String(row.id) === String(id));
   if (!item || !item.is_available || Number(item.stock_quantity) <= 0) return showToast("warning", "Item unavailable", "Choose another menu item.");
+  const requested = Math.max(1, Number(quantity) || 1);
   const existing = state.cart.find(row => String(row.id) === String(id));
   if (existing) {
-    if (existing.quantity >= Number(item.stock_quantity)) return showToast("warning", "Stock limit reached", `Only ${item.stock_quantity} available.`);
-    existing.quantity += 1;
+    if (existing.quantity + requested > Number(item.stock_quantity)) return showToast("warning", "Stock limit reached", `Only ${item.stock_quantity} available.`);
+    existing.quantity += requested;
   } else {
-    state.cart.push({id: item.id, name: item.name, price: Number(item.price), quantity: 1, image_url: item.image_url || "", category: item.category || "", stock_quantity: Number(item.stock_quantity)});
+    if (requested > Number(item.stock_quantity)) return showToast("warning", "Stock limit reached", `Only ${item.stock_quantity} available.`);
+    state.cart.push({id: item.id, name: item.name, price: Number(item.price), quantity: requested, image_url: item.image_url || "", category: item.category || "", stock_quantity: Number(item.stock_quantity)});
   }
-  saveCart(); renderCart(); showToast("success", "Added to cart", item.name);
+  saveCart(); renderCart(); showToast("success", "Added to cart", `${requested} × ${item.name} added to your cart.`);
+  return true;
 }
 function updateCartQuantity(id, change) {
   const row = state.cart.find(item => String(item.id) === String(id));
@@ -559,11 +573,67 @@ async function recommend() {
 async function sendChat(event) {
   event.preventDefault(); const input = $("#chat-input"); const message = input.value.trim(); if (!message) return;
   if (!state.token) { showToast("info", "Sign in to chat", "The assistant is available to signed-in students."); return showView("login"); }
-  appendChat(message, "user"); input.value = ""; const pending = appendChat("Thinking…", "assistant");
-  try { const data = await expectOk(await api("/api/ai/chat", {method: "POST", body: JSON.stringify({message})}), "Assistant unavailable"); pending.textContent = data.response; }
-  catch (error) { pending.textContent = `Sorry, I couldn’t answer: ${error.message}`; }
+  if (state.chatActive) return;
+  state.chatActive = true;
+  const sendButton = $("#chat-form button[type='submit']");
+  sendButton.disabled = true;
+  appendChat(message, "user"); input.value = "";
+  const pending = appendChat("UniCafe AI is thinking…", "assistant typing");
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+  let receivedText = false; let chatAction = null;
+  try {
+    const response = await api("/api/ai/chat/stream", {method: "POST", body: JSON.stringify({message, session_id: state.chatSessionId}), signal: controller.signal});
+    if (!response.ok) throw new Error(detailMessage(await responseData(response), "Assistant unavailable"));
+    if (!response.body) throw new Error("Streaming is not supported by this browser");
+    const reader = response.body.getReader(); const decoder = new TextDecoder(); let buffer = "";
+    while (true) {
+      const {value, done} = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, {stream: true});
+      let boundary;
+      while ((boundary = buffer.indexOf("\n\n")) !== -1) {
+        const block = buffer.slice(0, boundary); buffer = buffer.slice(boundary + 2);
+        let eventName = "message"; const dataLines = [];
+        block.split("\n").forEach(line => {
+          if (line.startsWith("event:")) eventName = line.slice(6).trim();
+          if (line.startsWith("data:")) dataLines.push(line.slice(5).trimStart());
+        });
+        if (!dataLines.length) continue;
+        const data = JSON.parse(dataLines.join("\n"));
+        if (eventName === "chunk" && data.text) {
+          if (!receivedText) { pending.textContent = ""; pending.classList.remove("typing"); receivedText = true; }
+          pending.textContent += cleanChatText(data.text); scrollChat();
+        }
+        if (eventName === "done" && data.action?.type === "add_to_cart") chatAction = data.action;
+      }
+    }
+    if (!receivedText) throw new Error("The assistant returned an empty response");
+    pending.textContent = cleanChatText(pending.textContent);
+    if (chatAction) renderChatAction(pending, chatAction);
+  } catch (error) {
+    pending.classList.remove("typing");
+    pending.textContent = error.name === "AbortError" ? "The assistant took too long. Please try again." : `Sorry, I couldn’t answer: ${error.message}`;
+  } finally {
+    clearTimeout(timeout); state.chatActive = false; sendButton.disabled = false; input.focus(); scrollChat();
+  }
 }
-function appendChat(message, role) { const node = document.createElement("div"); node.className = `chat-bubble ${role}`; node.textContent = message; $("#chat-messages").append(node); $("#chat-messages").scrollTop = $("#chat-messages").scrollHeight; return node; }
+function cleanChatText(value) { return String(value || "").replaceAll("*", "").replaceAll("#", ""); }
+function renderChatAction(bubble, action) {
+  const controls = document.createElement("div"); controls.className = "chat-actions";
+  const addButton = document.createElement("button"); addButton.type = "button"; addButton.className = "btn btn-primary btn-sm"; addButton.textContent = "Add to Cart";
+  const viewButton = document.createElement("button"); viewButton.type = "button"; viewButton.className = "btn btn-soft btn-sm"; viewButton.textContent = "View Cart";
+  addButton.addEventListener("click", async () => {
+    addButton.disabled = true;
+    if (!state.menu.some(item => String(item.id) === String(action.menu_item_id))) await loadMenu(true);
+    if (addToCart(action.menu_item_id, action.quantity)) addButton.textContent = "Added";
+    else addButton.disabled = false;
+  });
+  viewButton.addEventListener("click", () => showView("cart"));
+  controls.append(addButton, viewButton); bubble.append(controls); iconRefresh(); scrollChat();
+}
+function scrollChat() { $("#chat-messages").scrollTop = $("#chat-messages").scrollHeight; }
+function appendChat(message, role) { const node = document.createElement("div"); node.className = `chat-bubble ${role}`; node.textContent = message; $("#chat-messages").append(node); scrollChat(); return node; }
 
 function openModal(content, extraClass = "") {
   $("#modal-root").innerHTML = `<div class="modal-overlay" role="presentation"><section class="modal ${extraClass}" role="dialog" aria-modal="true">${content}</section></div>`;

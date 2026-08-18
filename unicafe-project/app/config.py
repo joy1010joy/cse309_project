@@ -49,6 +49,8 @@ class Settings:
     # Gemini --------------------------------------------------------------
     gemini_api_key: str | None
     gemini_model: str
+    ai_chat_first_chunk_timeout_seconds: int
+    ai_chat_total_timeout_seconds: int
 
     # Admin bootstrap -----------------------------------------------------
     admin_email: str | None
@@ -85,6 +87,14 @@ class Settings:
         self.gemini_model = (
             os.getenv("GEMINI_MODEL") or "gemini-3.6-flash"
         ).strip()
+        self.ai_chat_first_chunk_timeout_seconds = max(
+            1,
+            _int_env("AI_CHAT_FIRST_CHUNK_TIMEOUT_SECONDS", 7),
+        )
+        self.ai_chat_total_timeout_seconds = max(
+            self.ai_chat_first_chunk_timeout_seconds + 1,
+            _int_env("AI_CHAT_TOTAL_TIMEOUT_SECONDS", 15),
+        )
 
         self.admin_email = (os.getenv("ADMIN_EMAIL") or "").strip().lower() or None
         self.admin_password = os.getenv("ADMIN_PASSWORD") or None

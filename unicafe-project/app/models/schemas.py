@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -380,11 +380,30 @@ class NotificationRecord(BaseModel):
 
 class AIAssistantRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=500)
+    session_id: Optional[str] = Field(default=None, min_length=1, max_length=80)
+
+    @field_validator("message", "session_id")
+    @classmethod
+    def _strip_chat_value(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("must not be empty")
+        return cleaned
+
+
+class AIChatAction(BaseModel):
+    type: Literal["add_to_cart"]
+    menu_item_id: str
+    quantity: int = Field(..., gt=0)
 
 
 class AIResponse(BaseModel):
     response: str
     fallback: bool = False
+    source: Optional[str] = None
+    action: Optional[AIChatAction] = None
 
 
 class AIRecommendationItem(BaseModel):
