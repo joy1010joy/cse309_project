@@ -258,7 +258,10 @@ async function loadMenu(force = false) {
 function renderMenuFilters() {
   const categories = ["All", ...new Set(state.menu.map(item => item.category).filter(Boolean).sort())];
   if (!categories.includes(state.menuFilter)) state.menuFilter = "All";
-  $("#menu-filters").innerHTML = categories.map(category => `<button type="button" class="${category === state.menuFilter ? "active" : ""}" data-filter="${escapeHtml(category)}">${escapeHtml(category)}</button>`).join("");
+  const scroller = $("#menu-filters"); const scrollLeft = scroller.scrollLeft;
+  $("#menu-filter-all").classList.toggle("active", state.menuFilter === "All");
+  scroller.innerHTML = categories.slice(1).map(category => `<button type="button" class="${category === state.menuFilter ? "active" : ""}" data-filter="${escapeHtml(category)}">${escapeHtml(category)}</button>`).join("");
+  scroller.scrollLeft = scrollLeft;
 }
 function renderMenu() {
   const search = state.menuSearch.toLowerCase();

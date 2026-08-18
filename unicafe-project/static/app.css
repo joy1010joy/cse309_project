@@ -176,10 +176,14 @@ svg { width: 1.15em; height: 1.15em; stroke-width: 1.9; }
 
 /* Menu and cart */
 .menu-layout { display: grid; grid-template-columns: minmax(0, 1fr) 350px; align-items: start; gap: 23px; }
-.menu-toolbar { display: flex; align-items: center; gap: 15px; margin-bottom: 21px; padding: 13px; }
-.filter-chips { display: flex; gap: 7px; max-width: 52%; overflow-x: auto; scrollbar-width: none; }
+.menu-toolbar { display: flex; align-items: center; min-width: 0; gap: 15px; margin-bottom: 21px; padding: 13px; }
+.filter-chips { display: flex; flex: 0 1 52%; align-items: center; min-width: 0; max-width: 52%; gap: 7px; overflow: hidden; }
 .filter-chips button { min-height: 39px; padding: 8px 13px; border: 1px solid var(--line); border-radius: 10px; white-space: nowrap; background: #fff; cursor: pointer; font-size: 13px; font-weight: 700; }
 .filter-chips button.active { color: white; border-color: var(--green-900); background: var(--green-900); }
+.filter-chips > .all-filter { flex: 0 0 auto; }
+.category-scroll { display: flex; flex: 1; min-width: 0; gap: 7px; overflow-x: auto; overflow-y: hidden; white-space: nowrap; scroll-behavior: smooth; scrollbar-width: none; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+.category-scroll::-webkit-scrollbar { display: none; }
+.category-scroll button { flex: 0 0 auto; }
 .menu-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .menu-card { position: relative; overflow: hidden; background: white; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-sm); transition: transform .2s, box-shadow .2s; }
 .menu-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
@@ -463,7 +467,7 @@ svg { width: 1.15em; height: 1.15em; stroke-width: 1.9; }
   .page-shell { padding-top: 38px; padding-bottom: 65px; }
   .split-heading { align-items: flex-start; flex-direction: column; }
   .menu-toolbar { align-items: stretch; flex-direction: column; }
-  .filter-chips { max-width: 100%; }
+  .filter-chips { width: 100%; max-width: 100%; }
   .menu-grid, .skeleton-grid, .admin-menu-grid, .feedback-grid { grid-template-columns: 1fr; }
   .menu-card-image { aspect-ratio: 16/9; }
   .order-card-header, .order-card-footer { align-items: flex-start; flex-direction: column; }
