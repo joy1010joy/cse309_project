@@ -555,9 +555,72 @@ async function loadInsights() {
   const container = $("#admin-ai-content"); container.innerHTML = loadingHtml();
   try {
     const data = await expectOk(await api("/api/admin/ai/insights"), "Could not generate insights");
-    container.innerHTML = `<article class="insight-card card"><div class="card-heading"><span class="heading-icon accent"><i data-lucide="brain-circuit"></i></span><div><h2>Current operational summary</h2><p>${data.fallback ? "Reliable local summary while Gemini is unavailable" : "Generated from current UniCafe data"}</p></div></div><pre>${escapeHtml(data.response)}</pre></article>`;
+    const article = document.createElement("article"); article.className = "insight-card card";
+    const heading = document.createElement("div"); heading.className = "card-heading";
+    const icon = document.createElement("span"); icon.className = "heading-icon accent";
+    const iconGlyph = document.createElement("i"); iconGlyph.dataset.lucide = "brain-circuit"; icon.append(iconGlyph);
+    const headingText = document.createElement("div");
+    const title = document.createElement("h2"); title.textContent = "Current operational summary";
+    const subtitle = document.createElement("p"); subtitle.textContent = data.fallback ? "Reliable local summary while Gemini is unavailable" : "Generated from current UniCafe data";
+    headingText.append(title, subtitle); heading.append(icon, headingText);
+    const content = document.createElement("div"); content.className = "insight-content";
+    renderAIInsightContent(content, data.response);
+    article.append(heading, content); container.replaceChildren(article);
   } catch (error) { container.innerHTML = errorHtml(error.message, "reload-insights"); }
   iconRefresh();
+}
+
+function appendAIInsightInline(parent, value) {
+  const text = String(value || "");
+  const pattern = /(\*\*([^*]+)\*\*|__([^_]+)__|\*([^*]+)\*)/g;
+  let cursor = 0; let match;
+  const appendPlain = part => {
+    const cleaned = part
+      .replaceAll("**", "").replaceAll("__", "").replaceAll("*", "")
+      .replace(/(^|\s)#{1,3}(?=\s|$)/g, "$1")
+      .replace(/(^|\s)-{3,}(?=\s|$)/g, "$1");
+    if (cleaned) parent.append(document.createTextNode(cleaned));
+  };
+  while ((match = pattern.exec(text)) !== null) {
+    appendPlain(text.slice(cursor, match.index));
+    const node = document.createElement(match[4] ? "em" : "strong");
+    node.textContent = match[2] || match[3] || match[4] || "";
+    parent.append(node); cursor = pattern.lastIndex;
+  }
+  appendPlain(text.slice(cursor));
+}
+
+function renderAIInsightContent(container, value) {
+  container.replaceChildren();
+  let activeList = null; let activeListType = "";
+  const resetList = () => { activeList = null; activeListType = ""; };
+  String(value || "").replace(/\r\n?/g, "\n").split("\n").forEach(rawLine => {
+    const line = rawLine.trim();
+    if (!line) { resetList(); return; }
+    if (/^-{3,}$/.test(line)) {
+      resetList(); const divider = document.createElement("hr"); divider.className = "insight-divider"; container.append(divider); return;
+    }
+    const heading = line.match(/^(#{1,3})\s+(.+)$/);
+    if (heading) {
+      resetList(); const node = document.createElement("h3"); node.className = `insight-section-heading level-${heading[1].length}`;
+      appendAIInsightInline(node, heading[2]); container.append(node); return;
+    }
+    const bullet = line.match(/^[*+-]\s+(.+)$/);
+    const numbered = line.match(/^(\d+)[.)]\s+(.+)$/);
+    if (bullet || numbered) {
+      const type = numbered ? "numbered" : "bullet";
+      if (!activeList || activeListType !== type) {
+        activeList = document.createElement(numbered ? "ol" : "ul");
+        activeList.className = numbered ? "insight-numbered-list" : "insight-bullet-list";
+        container.append(activeList); activeListType = type;
+      }
+      const item = document.createElement("li");
+      const itemContent = document.createElement("div"); itemContent.className = "insight-list-content";
+      appendAIInsightInline(itemContent, (numbered || bullet)[numbered ? 2 : 1]);
+      item.append(itemContent); activeList.append(item); return;
+    }
+    resetList(); const paragraph = document.createElement("p"); appendAIInsightInline(paragraph, line); container.append(paragraph);
+  });
 }
 
 async function recommend() {
