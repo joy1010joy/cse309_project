@@ -251,9 +251,11 @@ async function loadMenu(force = false) {
     grid.innerHTML = `<div class="skeleton-grid" style="grid-column:1/-1"><div class="skeleton"></div><div class="skeleton"></div></div>`;
     try {
       state.menu = await expectOk(await api("/api/menu?include_unavailable=true", {auth: false}), "Could not load the menu");
-    } catch (error) { grid.innerHTML = errorHtml(error.message, "reload-menu"); iconRefresh(); return; }
+      reconcileCartWithMenu();
+    } catch (error) { grid.innerHTML = errorHtml(error.message, "reload-menu"); iconRefresh(); return false; }
   }
   renderMenuFilters(); renderMenu(); renderCart();
+  return true;
 }
 function renderMenuFilters() {
   const categories = ["All", ...new Set(state.menu.map(item => item.category).filter(Boolean).sort())];
@@ -303,6 +305,22 @@ function updateCartQuantity(id, change) {
   row.quantity = next; saveCart(); renderCart();
 }
 function removeCartItem(id) { state.cart = state.cart.filter(item => String(item.id) !== String(id)); saveCart(); renderCart(); }
+function reconcileCartWithMenu() {
+  if (!state.menu.length || !state.cart.length) return false;
+  let changed = false;
+  const reconciled = [];
+  state.cart.forEach(row => {
+    const item = state.menu.find(menuItem => String(menuItem.id) === String(row.id));
+    const stock = Number(item?.stock_quantity || 0);
+    if (!item || !item.is_available || stock <= 0) { changed = true; return; }
+    const quantity = Math.min(Math.max(1, Number(row.quantity) || 1), stock);
+    const canonical = {id: item.id, name: item.name, price: Number(item.price), quantity, image_url: item.image_url || "", category: item.category || "", stock_quantity: stock};
+    if (quantity !== Number(row.quantity) || canonical.name !== row.name || canonical.price !== Number(row.price) || canonical.stock_quantity !== Number(row.stock_quantity)) changed = true;
+    reconciled.push(canonical);
+  });
+  if (changed) { state.cart = reconciled; saveCart(); showToast("info", "Cart updated", "Your cart now matches current menu availability and stock."); }
+  return changed;
+}
 function renderCart() {
   const count = state.cart.reduce((sum, item) => sum + Number(item.quantity), 0);
   const total = state.cart.reduce((sum, item) => sum + Number(item.price) * Number(item.quantity), 0);
@@ -318,14 +336,21 @@ async function placeOrder() {
   if (!state.cart.length) return;
   if (!state.token) { showToast("info", "Ready to order?", "Sign in and your cart will be waiting."); return showView("login"); }
   const button = $("#place-order-button"); setButtonLoading(button, true, "Placing order…");
-  const pickup = $("#pickup-time").value || null;
   try {
+    const menuLoaded = await loadMenu(true);
+    if (!menuLoaded) throw new Error("Could not verify current menu stock. Please try again.");
+    if (!state.cart.length) throw new Error("The items in your cart are no longer available.");
+    const pickup = $("#pickup-time").value || null;
+    if (pickup && new Date(pickup).getTime() <= Date.now()) throw new Error("Pickup time must be in the future.");
     const order = await expectOk(await api("/api/orders", {method: "POST", body: JSON.stringify({items: state.cart.map(item => ({menu_item_id: item.id, quantity: Number(item.quantity)})), pickup_time: pickup})}), "Order could not be placed");
     state.cart = []; saveCart(); renderCart(); $("#pickup-time").value = "";
     showToast("success", "Order placed", `Order #${String(order.id).slice(0, 8)} is now pending.`);
     showOrderSuccess(order); await loadMenu(true);
-  } catch (error) { showToast("error", "Order failed", error.message || "Your cart has been preserved."); }
-  finally { setButtonLoading(button, false); }
+  } catch (error) {
+    if (/stock|unavailable|not found/i.test(error.message || "")) await loadMenu(true);
+    showToast("error", "Order failed", error.message || "Your cart has been preserved.");
+  }
+  finally { setButtonLoading(button, false); button.disabled = !state.cart.length; }
 }
 function showOrderSuccess(order) {
   openModal(`<div class="modal-head"><div><span class="kicker">Order received</span><h2>You’re all set!</h2><p>We’ll notify you as your order moves forward.</p></div><button class="icon-btn" type="button" data-close-modal aria-label="Close"><i data-lucide="x"></i></button></div><div class="card" style="padding:18px;margin-bottom:20px"><div class="top-list-row"><span>Order ID</span><strong>#${escapeHtml(String(order.id).slice(0, 8))}</strong></div><div class="top-list-row"><span>Total</span><strong>${formatCurrency(order.total_amount)}</strong></div><div class="top-list-row"><span>Status</span>${statusBadge(order.status)}</div>${order.pickup_time ? `<div class="top-list-row"><span>Pickup</span><strong>${escapeHtml(formatDate(order.pickup_time))}</strong></div>` : ""}</div><div class="modal-actions"><button class="btn btn-soft" type="button" data-close-modal>Keep browsing</button><button class="btn btn-primary" type="button" data-view="orders" data-close-modal>View my orders</button></div>`);
