@@ -27,10 +27,21 @@ class _QueryBuilder:
         return self
 
     def order_by(self, field: str, direction: Optional[str] = None) -> "_QueryBuilder":
-        if direction == "DESC":
-            self._query = self._query.order_by(field, direction=firestore.DESCENDING)
+        normalized = (direction or "ASCENDING").strip().upper()
+
+        if normalized in {"DESC", "DESCENDING"}:
+            firestore_direction = "DESCENDING"
+        elif normalized in {"ASC", "ASCENDING"}:
+            firestore_direction = "ASCENDING"
         else:
-            self._query = self._query.order_by(field)
+            raise ValueError(
+                "Direction must be ASC, ASCENDING, DESC, or DESCENDING"
+            )
+
+        self._query = self._query.order_by(
+            field,
+            direction=firestore_direction,
+        )
         return self
 
     def limit(self, count: int) -> "_QueryBuilder":
@@ -59,7 +70,9 @@ class _Collection:
         return _QueryBuilder(self._ref.where(field, op, value))
 
     def order_by(self, field: str, direction: Optional[str] = None) -> _QueryBuilder:
-        return _QueryBuilder(self._ref.order_by(field, direction=direction))
+        # Route ordering through _QueryBuilder so application-friendly
+        # values such as "DESC" are converted to Firestore constants.
+        return _QueryBuilder(self._ref).order_by(field, direction)
 
     def limit(self, count: int) -> _QueryBuilder:
         return _QueryBuilder(self._ref.limit(count))
@@ -87,10 +100,16 @@ class RealFirestoreAdapter:
     def transaction(self) -> RealTransaction:
         return self._client.transaction()
 
-    def run_in_transaction(self, txn, fn: Callable[[RealTransaction], Any]) -> Any:
-        # Newer google-cloud-firestore exposes a ``run`` helper on the client.
-        if hasattr(self._client, "run_in_transaction"):
-            return self._client.run_in_transaction(fn)
-        # Fall back to ``transactional`` decorator pattern.  The repositories
-        # pass an explicit transaction object, so we simply invoke ``fn``.
-        return fn(txn)
+    def run_in_transaction(self, fn: Callable[..., Any]) -> Any:
+        """Run *fn(transaction)* inside a Firestore-managed transaction.
+
+        The google-cloud-firestore SDK uses the ``@transactional`` decorator
+        which wraps the callback and manages begin/commit/retry automatically.
+        """
+
+        @firestore.transactional
+        def _txn_wrapper(txn):
+            return fn(txn)
+
+        return _txn_wrapper(self._client.transaction())
+

@@ -28,14 +28,18 @@ class MenuService:
             raise ServiceError("menu item with this name already exists", 409)
         doc = payload.model_dump()
         doc["id"] = item_id
-        doc.setdefault("available", True)
         self._menu.create(item_id, doc)
         return self._menu.get(item_id)
 
     def update(self, item_id: str, payload: MenuItemUpdate) -> Dict[str, Any]:
         if not self._menu.get(item_id):
             raise ServiceError("menu item not found", 404)
-        data = {k: v for k, v in payload.model_dump().items() if v is not None}
+        supplied = payload.model_dump(exclude_unset=True)
+        data = {
+            key: value
+            for key, value in supplied.items()
+            if value is not None or key == "image_url"
+        }
         if not data:
             return self._menu.get(item_id)
         self._menu.update(item_id, data)

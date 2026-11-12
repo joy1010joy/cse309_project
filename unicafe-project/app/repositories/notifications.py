@@ -45,18 +45,21 @@ class NotificationRepository:
         return data
 
     def list_for_user(self, user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+        # Filter by user_id only, then sort/limit in Python so Firestore does
+        # not require a composite index on (user_id, created_at).
         results: List[Dict[str, Any]] = []
         for snap in (
             self._db.collection(self.COLLECTION)
             .where("user_id", "==", user_id)
-            .order_by("created_at", "DESC")
-            .limit(limit)
             .stream()
         ):
             data = snap.to_dict() or {}
             if not data.get("id"):
                 data["id"] = snap.id
             results.append(data)
+        results.sort(key=lambda n: n.get("created_at") or "", reverse=True)
+        if limit is not None:
+            results = results[:limit]
         return results
 
     def list_all(self, limit: int = 100) -> List[Dict[str, Any]]:

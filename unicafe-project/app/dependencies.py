@@ -1,8 +1,6 @@
 """FastAPI dependencies — DB injection, authentication, role guards."""
 from __future__ import annotations
-
 from typing import Optional
-
 from fastapi import Depends, Header, HTTPException, status
 
 from app.config import Settings, get_settings
@@ -23,6 +21,7 @@ from app.services.notifications import NotificationService
 from app.services.orders import OrderService
 from app.services.reports import ReportService
 from app.services.users import UserService
+from app.services.inventory import InventoryService
 from app.utils.security import TokenError, decode_access_token
 
 
@@ -101,9 +100,10 @@ def get_dashboard_service(
 
 def get_report_service(
     orders: OrderRepository = Depends(get_order_repository),
+    menu: MenuRepository = Depends(get_menu_repository),
     settings: Settings = Depends(get_settings),
 ) -> ReportService:
-    return ReportService(orders=orders, settings=settings)
+    return ReportService(orders=orders, settings=settings, menu=menu)
 
 
 def get_ai_service(
@@ -176,7 +176,7 @@ def get_current_user(
 ) -> dict:
     token = _extract_bearer(authorization)
     try:
-        payload = decode_access_token(token, settings)
+        payload = decode_access_token(token)
     except TokenError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

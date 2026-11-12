@@ -1,6 +1,9 @@
 """Report aggregation — daily / monthly / popular items.
 
-All calculations exclude cancelled orders from revenue and popularity.
+Revenue semantics (consistent with dashboard):
+- Cancelled orders are excluded from revenue and popularity.
+- Non-cancelled orders (pending through completed) count toward revenue.
+
 CSV export is implemented per SRS.  Date ranges are interpreted in the
 project timezone (Asia/Dhaka by default) and converted to UTC for
 filtering.
@@ -15,6 +18,7 @@ from typing import Any, Dict, List, Optional
 
 from app.config import Settings
 from app.models.schemas import DailyReport, MonthlyReport, OrderResponse, PopularItem
+from app.repositories.menu import MenuRepository
 from app.repositories.orders import OrderRepository
 from app.utils.timezone import (
     local_date_string,
@@ -26,9 +30,15 @@ from app.utils.timezone import (
 
 
 class ReportService:
-    def __init__(self, orders: OrderRepository, settings: Settings):
+    def __init__(
+        self,
+        orders: OrderRepository,
+        settings: Settings,
+        menu: Optional[MenuRepository] = None,
+    ):
         self._orders = orders
         self._settings = settings
+        self._menu = menu
 
     # -- daily ------------------------------------------------------------
 
@@ -153,6 +163,8 @@ class ReportService:
         counts: Dict[str, Dict[str, Any]] = defaultdict(
             lambda: {"quantity": 0, "revenue": 0.0, "orders": set(), "name": "", "category": ""}
         )
+        menu_categories = self._menu_category_map()
+        wanted = (category or "").strip().lower() or None
 
         for order in self._orders.list_all():
             if order.get("status") == "cancelled":
@@ -160,13 +172,21 @@ class ReportService:
             order_id = order.get("id", "")
             for item in order.get("items", []):
                 item_id = item.get("menu_item_id") or item.get("name", "unknown")
-                if category and item.get("category") and item.get("category") != category:
+                item_category = (
+                    item.get("category")
+                    or menu_categories.get(str(item_id), "")
+                    or ""
+                )
+                if wanted and str(item_category).strip().lower() != wanted:
                     continue
                 bucket = counts[item_id]
                 bucket["name"] = item.get("name", bucket["name"])
-                bucket["category"] = item.get("category", bucket["category"])
+                bucket["category"] = item_category or bucket["category"]
                 bucket["quantity"] += int(item.get("quantity", 0))
-                bucket["revenue"] += float(item.get("subtotal") or item.get("price", 0) * item.get("quantity", 0))
+                bucket["revenue"] += float(
+                    item.get("subtotal")
+                    or float(item.get("price", 0)) * int(item.get("quantity", 0))
+                )
                 if order_id:
                     bucket["orders"].add(order_id)
 
@@ -188,6 +208,16 @@ class ReportService:
             )
             for index, (key, info) in enumerate(ranked)
         ]
+
+    def _menu_category_map(self) -> Dict[str, str]:
+        if self._menu is None:
+            return {}
+        mapping: Dict[str, str] = {}
+        for item in self._menu.list_all(include_unavailable=True):
+            item_id = str(item.get("id") or "")
+            if item_id:
+                mapping[item_id] = str(item.get("category") or "")
+        return mapping
 
     # -- CSV --------------------------------------------------------------
 

@@ -20,7 +20,7 @@ class MenuRepository:
         self._db.collection(self.COLLECTION).document(item_id).set(normalised)
 
     def update(self, item_id: str, data: Dict[str, Any]) -> None:
-        normalised = self._normalise(data)
+        normalised = self._normalise(data, partial=True)
         self._db.collection(self.COLLECTION).document(item_id).update(normalised)
 
     def delete(self, item_id: str) -> None:
@@ -33,13 +33,13 @@ class MenuRepository:
         if not snap.exists:
             return None
         data = snap.to_dict() or {}
-        return self._normalise(data)
+        return self._normalise(data, item_id=snap.id)
 
     def list_all(self, include_unavailable: bool = True) -> List[Dict[str, Any]]:
         results: List[Dict[str, Any]] = []
         for snap in self._db.collection(self.COLLECTION).order_by("category").stream():
             data = snap.to_dict() or {}
-            data = self._normalise(data)
+            data = self._normalise(data, item_id=snap.id)
             if not include_unavailable and not data.get("is_available", True):
                 continue
             results.append(data)
@@ -54,13 +54,17 @@ class MenuRepository:
             .stream()
         ):
             data = snap.to_dict() or {}
-            results.append(self._normalise(data))
+            results.append(self._normalise(data, item_id=snap.id))
         return results
 
     # -- schema normalisation --------------------------------------------
 
     @staticmethod
-    def _normalise(data: Dict[str, Any], item_id: Optional[str] = None) -> Dict[str, Any]:
+    def _normalise(
+        data: Dict[str, Any],
+        item_id: Optional[str] = None,
+        partial: bool = False,
+    ) -> Dict[str, Any]:
         out = dict(data)
         if item_id is not None:
             out["id"] = item_id
@@ -69,7 +73,10 @@ class MenuRepository:
             out["stock_quantity"] = out["stock"]
         if "is_available" not in out and "available" in out:
             out["is_available"] = out["available"]
-        out.setdefault("is_available", True)
-        out.setdefault("stock_quantity", 0)
-        out["stock_quantity"] = int(out.get("stock_quantity") or 0)
+        if not partial:
+            out.setdefault("is_available", True)
+            out.setdefault("stock_quantity", 0)
+            out.setdefault("image_url", None)
+        if "stock_quantity" in out:
+            out["stock_quantity"] = int(out.get("stock_quantity") or 0)
         return out
